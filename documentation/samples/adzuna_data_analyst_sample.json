@@ -1,0 +1,174 @@
+{
+  "count": 18402,
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+  "results": [
+    {
+      "id": "5930203271",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Govcio LLC"
+      },
+      "latitude": 39.11376,
+      "location": {
+        "area": [
+          "US",
+          "Maryland",
+          "Anne Arundel County",
+          "Fort George G Meade"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Fort George G Meade, Anne Arundel County"
+      },
+      "created": "2026-10-16T03:25:40Z",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTkzMDIwMzI3MSIsInMiOiJrbXRfUXJmTThSR2VGLVN3X3ZISWxnIn0.88zfTpYOlbhxlH0OCq1z2UwEywBZnS3jq1OqIjebk78",
+      "category": {
+        "label": "IT Jobs",
+        "tag": "it-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category"
+      },
+      "salary_is_predicted": "1",
+      "title": "Lead Data Analyst",
+      "redirect_url": "https://www.adzuna.com/land/ad/5930203271?se=kmt_QrfM8RGeF-Sw_vHIlg&utm_medium=api&utm_source=3e43b925&v=BFB88CEB9433D1A5DE605120F68EFFA44ED8A836",
+      "longitude": -76.726777,
+      "salary_min": 103516.3,
+      "description": "Overview: GovCIO is currently hiring for a Data Analyst to lead development of data strategy. This position will be located in Fort Meaded, MD and will be an onsite position. Responsibilities: The Data Analyst leads development of the data strategy that transforms autonomous pentesting outputs into structured, contextualized datasets suitable for AI training and advanced analytics. This role defines data taxonomies, metadata requirements, labeling approaches, and governance considerations to en…",
+      "salary_max": 103516.3
+    },
+    {
+      "location": {
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US",
+          "Oregon",
+          "Multnomah County",
+          "Portland"
+        ],
+        "display_name": "Portland, Multnomah County"
+      },
+      "created": "2026-10-12T20:09:56Z",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "description": "CV Resources is partnering with a growing manufacturing & distribution client in Portland to identify a Supply Chain Data Analyst for a contract opportunity supporting key data initiatives, system implementation, and digital transformation projects. Position: Supply Chain Data Analyst Location: Portland, OR (Onsite, with some hybrid flexibility) Schedule: Part-time, approximately 25–30 hours per week Duration: Contract, estimated 2–4 months Position Overview Our client is seeking a highly analy…",
+      "salary_max": 62400,
+      "category": {
+        "label": "IT Jobs",
+        "tag": "it-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category"
+      },
+      "salary_is_predicted": "0",
+      "contract_type": "contract",
+      "redirect_url": "https://www.adzuna.com/details/5925063077?utm_medium=api&utm_source=3e43b925",
+      "longitude": -122.688215,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTkyNTA2MzA3NyIsInMiOiJrbXRfUXJmTThSR2VGLVN3X3ZISWxnIn0.-wR1bOJp_buV_HcO-LFWbnvkL-FHsLpX9gWiKTAeLEA",
+      "id": "5925063077",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "CV Resources"
+      },
+      "latitude": 45.505603,
+      "contract_time": "part_time",
+      "salary_min": 62400,
+      "title": "Supply Chain Data Analyst"
+    },
+    {
+      "category": {
+        "label": "IT Jobs",
+        "tag": "it-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category"
+      },
+      "salary_is_predicted": "0",
+      "redirect_url": "https://www.adzuna.com/land/ad/5933119848?se=kmt_QrfM8RGeF-Sw_vHIlg&utm_medium=api&utm_source=3e43b925&v=E833E0EBF32BFB9C8FB68AF7AB94348733A4CF41",
+      "longitude": -93.778269,
+      "title": "Audit Data Analyst",
+      "description": "The Audit Data Analyst supports the Compliance Audit team through data collection, transformation, reporting, process evaluation, and audit activities. Working closely with department leadership, directors, and staff, this role helps turn audit and documentation data into meaningful insights that support education, process improvement, regulatory compliance, and strong outcomes. The ideal candidate is comfortable working with data and systems while also communicating findings in a clear, collab…",
+      "salary_min": 43638,
+      "salary_max": 43638,
+      "id": "5933119848",
+      "company": {
+        "display_name": "Compass Health Network",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "latitude": 38.368632,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "created": "2026-10-18T04:43:17Z",
+      "location": {
+        "area": [
+          "US",
+          "Missouri",
+          "Henry County",
+          "Clinton"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Clinton, Henry County"
+      },
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoia210X1FyZk04UkdlRi1Td192SElsZyIsImkiOiI1OTMzMTE5ODQ4In0.1vfytXLmcI2movSXGBTNUQJJQD1aYHCfIwrW0kBIhMw"
+    },
+    {
+      "id": "5931224936",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "company": {
+        "display_name": "CERNER TECHNOLOGIES LLC",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "latitude": 37.56,
+      "location": {
+        "display_name": "Richmond, Richmond County",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US",
+          "Virginia",
+          "Richmond County",
+          "Richmond"
+        ]
+      },
+      "created": "2026-10-16T19:47:28Z",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoia210X1FyZk04UkdlRi1Td192SElsZyIsImkiOiI1OTMxMjI0OTM2In0.NHXV2X9ApQ9Sjj34b_2Q6EblDhJ9eLzFvPkEZ4v6fig",
+      "salary_is_predicted": "1",
+      "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "it-jobs",
+        "label": "IT Jobs"
+      },
+      "title": "Junior Data Analyst/Data Analyst",
+      "redirect_url": "https://www.adzuna.com/land/ad/5931224936?se=kmt_QrfM8RGeF-Sw_vHIlg&utm_medium=api&utm_source=3e43b925&v=7C2A00AB6AB81756F6DA591B423C0B7D9548C3C7",
+      "longitude": -77.45,
+      "salary_min": 59370.02,
+      "description": "Job Title: Junior Data Analyst / Data Analyst Experience: 0 3 Years Employment Type: Full-Time Location: Remote / Hybrid / Onsite Job Summary We are seeking a detail-oriented Junior Data Analyst to support data analysis, reporting, data validation, and business decision-making. The ideal candidate should have basic knowledge of SQL, Excel, and data visualization tools. Key Responsibilities Collect, clean, and analyze data from multiple sources. Write SQL queries to extract, filter, and validate…",
+      "salary_max": 59370.02
+    },
+    {
+      "longitude": -90.447207,
+      "redirect_url": "https://www.adzuna.com/land/ad/5934652255?se=kmt_QrfM8RGeF-Sw_vHIlg&utm_medium=api&utm_source=3e43b925&v=83ED02C3DAB9D66FFF5BA40F11632C98EB4DF97C",
+      "title": "Data Analyst",
+      "salary_is_predicted": "1",
+      "category": {
+        "label": "Accounting & Finance Jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "accounting-finance-jobs"
+      },
+      "salary_max": 95726.8,
+      "description": "RESPONSIBILITIES: Kforce has a client that is seeking a remote Data Analyst. Summary: The Data Analyst supports client-facing and internal teams by analyzing financial and real estate data to deliver accurate, actionable insights. This role focuses on data analysis, financial modeling, reporting, dashboard development, and data quality. The analyst will work with large datasets, develop KPIs and analytical models, and translate complex data into clear reporting and business insights. Key Respon…",
+      "salary_min": 95726.8,
+      "company": {
+        "display_name": "Kforce Technology Staffing",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "latitude": 38.688153,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "id": "5934652255",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoia210X1FyZk04UkdlRi1Td192SElsZyIsImkiOiI1OTM0NjUyMjU1In0.Ru6FhHue8krgAvpfXCBt2QvkmyTwgFM1CP6LLE4AyBA",
+      "created": "2026-10-19T19:49:03Z",
+      "location": {
+        "display_name": "Creve Coeur, Saint Louis County",
+        "area": [
+          "US",
+          "Missouri",
+          "Saint Louis County",
+          "Creve Coeur"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location"
+      }
+    }
+  ],
+  "mean": 119361.67
+}
