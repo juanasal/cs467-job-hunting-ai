@@ -1,0 +1,162 @@
+{
+  "mean": 163254.7,
+  "results": [
+    {
+      "salary_is_predicted": "1",
+      "title": "Remote Software Engineer",
+      "description": "About Us: Based in San Francisco, California, Turing is the world’s leading research accelerator for frontier AI labs and a trusted partner for global enterprises deploying advanced AI systems. Turing supports customers in two ways: first, by accelerating frontier research with high-quality data, advanced training pipelines, plus top AI researchers who specialize in software engineering, logical reasoning, STEM, multilinguality, multimodality, and agents; and second, by applying that expertise …",
+      "salary_min": 200796.4,
+      "created": "2026-08-31T18:04:38Z",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "TURING ENTERPRISES, INC."
+      },
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTg2MzIxNzU0NiIsInMiOiJUcVI4RkxmTThSR0s5cWJjbVZaa2F3In0.fHUOtFq7PmA_cE-qGJpinm9OglM-SGwMtupl31O6JYo",
+      "id": "5863217546",
+      "category": {
+        "tag": "it-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "IT Jobs"
+      },
+      "location": {
+        "area": [
+          "US"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "US"
+      },
+      "redirect_url": "https://www.adzuna.com/land/ad/5863217546?se=TqR8FLfM8RGK9qbcmVZkaw&utm_medium=api&utm_source=3e43b925&v=254A46BE2FA3314FB5E2CB04D2C6B9E8CB49127F",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "salary_max": 200796.4
+    },
+    {
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTg4OTU4NDQxMiIsInMiOiJUcVI4RkxmTThSR0s5cWJjbVZaa2F3In0.YVNZBLTCNaoy7nE_wEg3qaIQoytjeEL3oqrMYI0_uQQ",
+      "id": "5889584412",
+      "latitude": 39.7159,
+      "company": {
+        "display_name": "Booz Allen Hamilton",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "redirect_url": "https://www.adzuna.com/land/ad/5889584412?se=TqR8FLfM8RGK9qbcmVZkaw&utm_medium=api&utm_source=3e43b925&v=5F58B93F311A036CE5A6D8ED6952D59A6896574F",
+      "location": {
+        "area": [
+          "US",
+          "Ohio",
+          "Montgomery County",
+          "Oakwood"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Oakwood, Montgomery County"
+      },
+      "category": {
+        "tag": "scientific-qa-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "Scientific & QA Jobs"
+      },
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "longitude": -84.1403,
+      "salary_max": 195816.58,
+      "description": "Job Number: R0243286 Remote Sensing Software Engineer The Opportunity: At Booz Allen, you'll join a team using advanced imaging, physics-based modeling, and AI / ML to solve some of the nation's most compelling Space Domain Awareness ( SDA ) and remote sensing challenges. You'll contribute to the design and development of high-fidelity processing pipelines that transform raw sensor data into insight. You'll join a collaborative technical delivery team where you'll contribute to secure, reliable…",
+      "salary_min": 195816.58,
+      "title": "Remote Sensing Software Engineer",
+      "salary_is_predicted": "1",
+      "created": "2026-09-18T12:30:06Z"
+    },
+    {
+      "location": {
+        "display_name": "Oakwood, Montgomery County",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US",
+          "Ohio",
+          "Montgomery County",
+          "Oakwood"
+        ]
+      },
+      "category": {
+        "tag": "scientific-qa-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "Scientific & QA Jobs"
+      },
+      "redirect_url": "https://www.adzuna.com/land/ad/5772870771?se=TqR8FLfM8RGK9qbcmVZkaw&utm_medium=api&utm_source=3e43b925&v=0D5F79AF727E2DD2E77FAD3ABE3221B4B2664A5F",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Booz Allen Hamilton"
+      },
+      "id": "5772870771",
+      "latitude": 39.7159,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiVHFSOEZMZk04UkdLOXFiY21WWmthdyIsImkiOiI1NzcyODcwNzcxIn0.UC_v4u3iASOJB_OAIykBKeiR1VnPzQYNdSOG_AicxH4",
+      "salary_max": 200938.16,
+      "longitude": -84.1403,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "created": "2026-06-22T17:13:23Z",
+      "salary_is_predicted": "1",
+      "title": "Remote Sensing Software Engineer",
+      "description": "Job Number: R0242684 Remote Sensing Software Engineer The Opportunity At Booz Allen, you'll join a team using advanced imaging, physics-based modeling, and AI / ML to solve some of the nation's most compelling Space Domain Awareness ( SDA ) and remote sensing challenges. You'll contribute to the design and develop ment of high-fidelity processing pipelines that transform raw sensor data into insight. You'll join a collaborative technical delivery team where you'll contribute to secure, reliable…",
+      "salary_min": 200938.16
+    },
+    {
+      "created": "2026-08-31T18:04:46Z",
+      "description": "About Us: Based in San Francisco, California, Turing is the world’s leading research accelerator for frontier AI labs and a trusted partner for global enterprises deploying advanced AI systems. Turing supports customers in two ways: first, by accelerating frontier research with high-quality data, advanced training pipelines, plus top AI researchers who specialize in software engineering, logical reasoning, STEM, multilinguality, multimodality, and agents; and second, by applying that expertise …",
+      "salary_min": 265047.72,
+      "title": "Remote Senior Software Engineer",
+      "salary_is_predicted": "1",
+      "redirect_url": "https://www.adzuna.com/land/ad/5863217626?se=TqR8FLfM8RGK9qbcmVZkaw&utm_medium=api&utm_source=3e43b925&v=5FE2FB5581F2650145C42EB085DED081138D46E7",
+      "location": {
+        "display_name": "US",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US"
+        ]
+      },
+      "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "it-jobs",
+        "label": "IT Jobs"
+      },
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTg2MzIxNzYyNiIsInMiOiJUcVI4RkxmTThSR0s5cWJjbVZaa2F3In0.q7yawnpJrAp73JUMnRbE_rqA55WAA_Rjt3EDWsRDIGI",
+      "id": "5863217626",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "TURING ENTERPRISES, INC."
+      },
+      "salary_max": 265047.72,
+      "__CLASS__": "Adzuna::API::Response::Job"
+    },
+    {
+      "redirect_url": "https://www.adzuna.com/land/ad/5903767575?se=TqR8FLfM8RGK9qbcmVZkaw&utm_medium=api&utm_source=3e43b925&v=215194D7C29C5290624CA50F05ADD30AD2A0D445",
+      "location": {
+        "display_name": "Aurora, Arapahoe County",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US",
+          "Colorado",
+          "Arapahoe County",
+          "Aurora"
+        ]
+      },
+      "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "it-jobs",
+        "label": "IT Jobs"
+      },
+      "id": "5903767575",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiVHFSOEZMZk04UkdLOXFiY21WWmthdyIsImkiOiI1OTAzNzY3NTc1In0.GXMgC-DyOhhXd18rEQW-_ipt3V7W7CP32GyZbguMGP0",
+      "latitude": 39.70062,
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Booz Allen Hamilton"
+      },
+      "salary_max": 234014.9,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "longitude": -104.8377,
+      "created": "2026-09-30T06:37:59Z",
+      "description": "Job Number: R0250625 Remote Sensing Software Engineer, Senior The Opportunity: As a senior Remote Sensing Software Engineer, you will architect advanced SDA and remote sensing exploitation pipelines, guide technical direction, and lead multi-disciplinary teams building high-fidelity space observation analytics. You will shape next-generation tools that integrate imaging physics, ML-based behavior inference, and multi-sensor fusion. You'll join a collaborative technical delivery team where you'l…",
+      "salary_min": 234014.9,
+      "salary_is_predicted": "1",
+      "title": "Senior Remote Sensing Software Engineer"
+    }
+  ],
+  "count": 1371,
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults"
+}

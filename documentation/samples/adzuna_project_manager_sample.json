@@ -1,0 +1,173 @@
+{
+  "count": 528208,
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+  "mean": 108987.08,
+  "results": [
+    {
+      "created": "2026-10-09T21:14:29Z",
+      "title": "Project Manager",
+      "salary_max": 135540.42,
+      "category": {
+        "tag": "engineering-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "Engineering Jobs"
+      },
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "description": "Description: Crane Engineering is a family-oriented Midwest based company; with locations in Wisconsin and Minnesota. As a result of our growth, we have a need for a Project Manager. The Project Manager owns the end-to-end execution of custom-designed, engineered-to-order skid system projects from commercial handoff through engineering, procurement, fabrication, factory testing, shipment, field installation/commissioning, and closeout. The role is accountable for scope, schedule, cost, cash flo…",
+      "latitude": 44.269765,
+      "id": "5921385791",
+      "salary_min": 135540.42,
+      "longitude": -88.337835,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiMHUyS2lMZk04UkdVbFpjTGJpOVhmQSIsImkiOiI1OTIxMzg1NzkxIn0.bfFqaVIpzTeGyuCdJ3CmRSPkM1DIEwLllX51y5EVNVI",
+      "company": {
+        "display_name": "Crane Engineering Sales Inc",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "redirect_url": "https://www.adzuna.com/details/5921385791?utm_medium=api&utm_source=3e43b925",
+      "salary_is_predicted": "1",
+      "location": {
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Kimberly, Outagamie County",
+        "area": [
+          "US",
+          "Wisconsin",
+          "Outagamie County",
+          "Kimberly"
+        ]
+      }
+    },
+    {
+      "created": "2026-10-15T20:59:22Z",
+      "salary_max": 120000,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTkyOTY1MDA4MiIsInMiOiIwdTJLaUxmTThSR1VsWmNMYmk5WGZBIn0.E3uNgfYLuXEXiXGFRDwfpkmzTVD1zz_Rbv6IAy_ONWc",
+      "redirect_url": "https://www.adzuna.com/details/5929650082?utm_medium=api&utm_source=3e43b925",
+      "salary_is_predicted": "0",
+      "title": "Industrial Project Manager",
+      "category": {
+        "tag": "engineering-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "Engineering Jobs"
+      },
+      "description": "The Industrial Project Manager will be responsible for managing industrial furnace builds, rebuilds, and retrofits. The Project Manager must maintain good communication with the combustion team, vendors, and clients. The Project Manager must work with all relevant departments and vendors to complete projects and provide assistance during construction, commissioning, and startups. This role requires a blend of engineering expertise, project management skills, and a keen eye for detail to ensure …",
+      "id": "5929650082",
+      "latitude": 42.072633,
+      "salary_min": 80000,
+      "contract_time": "full_time",
+      "longitude": -80.063688,
+      "company": {
+        "display_name": "Onex Inc",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "location": {
+        "area": [
+          "US",
+          "Pennsylvania",
+          "Perry County",
+          "Perry Village"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Perry Village, Perry County"
+      }
+    },
+    {
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Constellation Energy"
+      },
+      "longitude": -76.730736,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTkzMDk5MDU0NiIsInMiOiIwdTJLaUxmTThSR1VsWmNMYmk5WGZBIn0.8IZfdjZO01auHds7Oq113-s_fNlS07_g8ti55DnVKXQ",
+      "location": {
+        "area": [
+          "US",
+          "Maryland",
+          "St. Mary's County",
+          "Mechanicsville"
+        ],
+        "display_name": "Mechanicsville, St. Mary's County",
+        "__CLASS__": "Adzuna::API::Response::Location"
+      },
+      "redirect_url": "https://www.adzuna.com/land/ad/5930990546?se=0u2KiLfM8RGUlZcLbi9XfA&utm_medium=api&utm_source=3e43b925&v=E0CB18871CF80CC24DA0F246425A542A0C80BEF5",
+      "salary_is_predicted": "1",
+      "category": {
+        "label": "Energy, Oil & Gas Jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "energy-oil-gas-jobs"
+      },
+      "salary_max": 112588.68,
+      "created": "2026-10-16T13:18:11Z",
+      "title": "Sr Project Manager",
+      "salary_min": 112588.68,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "description": "Who We Are As the largest private-sector power producer in the world and the nation's largest producer of clean and reliable energy, Constellation is focused on our purpose: lighting the way to a brilliant tomorrow for all. We have been the leader in clean energy production for more than a decade, and we are cultivating a workplace where our employees can grow, thrive, and contribute. Now integrated with Calpine, our portfolio includes 55 gigawatts of capacity from nuclear, natural gas, geother…",
+      "id": "5930990546",
+      "latitude": 38.427937
+    },
+    {
+      "created": "2026-10-16T13:18:12Z",
+      "title": "Sr Project Manager",
+      "category": {
+        "tag": "energy-oil-gas-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "label": "Energy, Oil & Gas Jobs"
+      },
+      "salary_max": 119782.15,
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "description": "Who We Are As the largest private-sector power producer in the world and the nation's largest producer of clean and reliable energy, Constellation is focused on our purpose: lighting the way to a brilliant tomorrow for all. We have been the leader in clean energy production for more than a decade, and we are cultivating a workplace where our employees can grow, thrive, and contribute. Now integrated with Calpine, our portfolio includes 55 gigawatts of capacity from nuclear, natural gas, geother…",
+      "latitude": 38.608628,
+      "id": "5930990645",
+      "salary_min": 119782.15,
+      "longitude": -76.600951,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiMHUyS2lMZk04UkdVbFpjTGJpOVhmQSIsImkiOiI1OTMwOTkwNjQ1In0.Xd2A678main_sEHJZUCvhHizZHvvcLpdIxrEA6ITS5o",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Constellation Energy"
+      },
+      "redirect_url": "https://www.adzuna.com/land/ad/5930990645?se=0u2KiLfM8RGUlZcLbi9XfA&utm_medium=api&utm_source=3e43b925&v=2CA03C93B9B25181A48F66BCB0236AD8AB6BFB15",
+      "salary_is_predicted": "1",
+      "location": {
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Huntingtown, Calvert County",
+        "area": [
+          "US",
+          "Maryland",
+          "Calvert County",
+          "Huntingtown"
+        ]
+      }
+    },
+    {
+      "category": {
+        "label": "Engineering Jobs",
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "engineering-jobs"
+      },
+      "salary_max": 60932.43,
+      "title": "Water Project Manager",
+      "created": "2026-10-18T15:36:45Z",
+      "salary_min": 60932.43,
+      "latitude": 37.431472,
+      "description": "Stanley Steemer is the industry leader in clean! Be part of a fun, team-oriented company that develops its employees from within. We are seeking a Water Project Manager to provide exceptional emergency water services to our customers as needed while following company policies, procedures, and training. You will be extracting water, performing demolitions, and light construction tasks safely through effective communication and following Stanley Steemer's Policy and IICRC Standards. $21 per hour …",
+      "id": "5933597580",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "company": {
+        "display_name": "Stanley Steemer",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "longitude": -77.648361,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiMHUyS2lMZk04UkdVbFpjTGJpOVhmQSIsImkiOiI1OTMzNTk3NTgwIn0.MHSkimpPXJyw21KAd2L4AGxEsueaHIRJvCPLGDgiy7Y",
+      "location": {
+        "display_name": "Midlothian, Chesterfield County",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "area": [
+          "US",
+          "Virginia",
+          "Chesterfield County",
+          "Midlothian"
+        ]
+      },
+      "salary_is_predicted": "1",
+      "redirect_url": "https://www.adzuna.com/land/ad/5933597580?se=0u2KiLfM8RGUlZcLbi9XfA&utm_medium=api&utm_source=3e43b925&v=FFE73FC9DA3854F64D798D38621806B54F6E26BD"
+    }
+  ]
+}
