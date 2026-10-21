@@ -38,3 +38,9 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## AI Usage Citation
 OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, conversational share link, OpenAI, 2026, https://chatgpt.com/share/6ad91d99-e174-83e8-8fc4-19355e77abe8.
+
+## How to Run
+1. Navigate to frontend -> my-react-app
+2. npm install in terminal
+3. npm run dev in terminal
+4. Run site on http://localhost:5174/
