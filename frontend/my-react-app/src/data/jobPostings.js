@@ -5,7 +5,8 @@ export const jobPostings = [
     company: "Google",
     location: "Mountain View, CA",
     workplace: "Hybrid",
-    experience: "Entry level",
+    education: "Bachelor's",
+    salary: 85000,
   },
   {
     id: 102,
@@ -13,7 +14,8 @@ export const jobPostings = [
     company: "Microsoft",
     location: "Redmond, WA",
     workplace: "On-site",
-    experience: "Entry level",
+    education: "Master's",
+    salary: 95000,
   },
   {
     id: 103,
@@ -21,7 +23,8 @@ export const jobPostings = [
     company: "Coinbase",
     location: "Remote",
     workplace: "Remote",
-    experience: "0–2 years",
+    education: "Bachelor's",
+    salary: 110000,
   },
   {
     id: 104,
@@ -29,6 +32,7 @@ export const jobPostings = [
     company: "Amazon",
     location: "Seattle, WA",
     workplace: "Hybrid",
-    experience: "1–3 years",
+    education: "Bachelor's",
+    salary: 105000,
   },
 ];

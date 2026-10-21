@@ -1,15 +1,13 @@
 import { useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
-  LayoutDashboard,
-  FileText,
-  UserRound,
   Search,
   Clock3,
   CircleCheck,
   XCircle,
   Menu,
   MapPin,
+  UserRound,
 } from "lucide-react";
 
 import { initialApplications } from "./data/applications";
@@ -30,19 +28,49 @@ export default function App() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
-  
+
+  // Job Search Filters
   const [jobTitleSearch, setJobTitleSearch] = useState("");
   const [jobLocation, setJobLocation] = useState("");
-  const [experience, setExperience] = useState("Any experience");
   const [workplaceType, setWorkplaceType] = useState("Any type");
+  const [education, setEducation] = useState("Any education");
+  const [minSalary, setMinSalary] = useState(50000);
+  const [maxSalary, setMaxSalary] = useState(150000);
 
+  // Helper function to format salary for display
+  const formatSalaryLabel = (val) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(val);
+
+  // Filtering Available Job Postings
   const filteredAvailableJobs = jobPostings.filter((job) => {
-    const matchesTitle = job.title.toLowerCase().includes(jobTitleSearch.toLowerCase());
-    const matchesLocation = job.location.toLowerCase().includes(jobLocation.toLowerCase());
-    const matchesWorkplace = workplaceType === "Any type" || job.workplace === workplaceType;
-    const matchesExperience = experience === "Any experience" || job.experience === experience;
+    const matchesTitle = job.title
+      .toLowerCase()
+      .includes(jobTitleSearch.toLowerCase());
 
-    return matchesTitle && matchesLocation && matchesWorkplace && matchesExperience;
+    const matchesLocation = job.location
+      .toLowerCase()
+      .includes(jobLocation.toLowerCase());
+
+    const matchesWorkplace =
+      workplaceType === "Any type" || job.workplace === workplaceType;
+
+    const matchesEducation =
+      education === "Any education" || job.education === education;
+
+    const matchesSalary =
+      !job.salary || (job.salary >= minSalary && job.salary <= maxSalary);
+
+    return (
+      matchesTitle &&
+      matchesLocation &&
+      matchesWorkplace &&
+      matchesEducation &&
+      matchesSalary
+    );
   });
 
   const statuses = ["Applied", "In Progress", "Interview", "Offer", "Rejected"];
@@ -63,7 +91,9 @@ export default function App() {
 
   const counts = {
     total: jobs.length,
-    progress: jobs.filter((j) => ["Applied", "In Progress", "Interview"].includes(j.status)).length,
+    progress: jobs.filter((j) =>
+      ["Applied", "In Progress", "Interview"].includes(j.status)
+    ).length,
     offers: jobs.filter((j) => j.status === "Offer").length,
     rejected: jobs.filter((j) => j.status === "Rejected").length,
   };
@@ -78,12 +108,15 @@ export default function App() {
     setJobs((current) =>
       current.map((job) => (job.id === id ? { ...job, status } : job))
     );
-    setSelectedJob((current) => (current?.id === id ? { ...current, status } : current));
+    setSelectedJob((current) =>
+      current?.id === id ? { ...current, status } : current
+    );
   }
 
   function handleTrackJob(job) {
     const alreadyApplied = jobs.some(
-      (application) => application.company === job.company && application.position === job.title
+      (application) =>
+        application.company === job.company && application.position === job.title
     );
 
     if (alreadyApplied) {
@@ -145,13 +178,17 @@ export default function App() {
               <div>
                 <p className="eyebrow">EXPLORE OPPORTUNITIES</p>
                 <h1>Job Postings</h1>
-                <p className="page-description">Find opportunities that match your career goals.</p>
+                <p className="page-description">
+                  Find opportunities that match your career goals.
+                </p>
               </div>
             </div>
 
             <section className="postings-panel">
               <h2>Find your next role</h2>
-              <p className="postings-subtitle">Search job titles and narrow down your results.</p>
+              <p className="postings-subtitle">
+                Search job titles and narrow down your results.
+              </p>
 
               <label htmlFor="job-title-search">Job title</label>
               <div className="posting-search">
@@ -166,16 +203,18 @@ export default function App() {
 
               <div className="posting-filters">
                 <div className="filter-field">
-                  <label htmlFor="experience-filter">Years of experience</label>
+                  <label htmlFor="education-filter">Education level</label>
                   <select
-                    id="experience-filter"
-                    value={experience}
-                    onChange={(e) => setExperience(e.target.value)}
+                    id="education-filter"
+                    value={education}
+                    onChange={(e) => setEducation(e.target.value)}
                   >
-                    <option>Any experience</option>
-                    <option>Entry level</option>
-                    <option>0–2 years</option>
-                    <option>1–3 years</option>
+                    <option>Any education</option>
+                    <option>High School</option>
+                    <option>Associate's</option>
+                    <option>Bachelor's</option>
+                    <option>Master's</option>
+                    <option>Doctorate</option>
                   </select>
                 </div>
 
@@ -205,6 +244,42 @@ export default function App() {
                     />
                   </div>
                 </div>
+
+                <div className="filter-field slider-filter-field">
+                  <label>
+                    Min Salary: <strong>{formatSalaryLabel(minSalary)}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="30000"
+                    max="150000"
+                    step="5000"
+                    value={minSalary}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setMinSalary(val);
+                      if (val > maxSalary) setMaxSalary(val);
+                    }}
+                  />
+                </div>
+
+                <div className="filter-field slider-filter-field">
+                  <label>
+                    Max Salary: <strong>{formatSalaryLabel(maxSalary)}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="30000"
+                    max="150000"
+                    step="5000"
+                    value={maxSalary}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setMaxSalary(val);
+                      if (val < minSalary) setMinSalary(val);
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="posting-results-header">
@@ -214,7 +289,11 @@ export default function App() {
 
               <div className="posting-results">
                 {filteredAvailableJobs.map((job) => (
-                  <JobPostingCard key={job.id} job={job} onTrack={handleTrackJob} />
+                  <JobPostingCard
+                    key={job.id}
+                    job={job}
+                    onTrack={handleTrackJob}
+                  />
                 ))}
 
                 {filteredAvailableJobs.length === 0 && (
@@ -230,8 +309,12 @@ export default function App() {
             <section className="page-heading">
               <div>
                 <p className="eyebrow">YOUR CAREER WORKSPACE</p>
-                <h1>{activePage === "Dashboard" ? "Dashboard" : "Applied Jobs"}</h1>
-                <p className="page-description">Keep track of your applications and next steps.</p>
+                <h1>
+                  {activePage === "Dashboard" ? "Dashboard" : "Applied Jobs"}
+                </h1>
+                <p className="page-description">
+                  Keep track of your applications and next steps.
+                </p>
               </div>
             </section>
 
@@ -271,7 +354,11 @@ export default function App() {
             <section className="jobs-panel">
               <div className="panel-header">
                 <div>
-                  <h2>{activePage === "Dashboard" ? "Recent Applications" : "All Applications"}</h2>
+                  <h2>
+                    {activePage === "Dashboard"
+                      ? "Recent Applications"
+                      : "All Applications"}
+                  </h2>
                   <p>Review and update your job search progress.</p>
                 </div>
                 <span className="results-count">{filteredJobs.length} jobs</span>
@@ -345,18 +432,27 @@ export default function App() {
               <input id="profile-name" placeholder="Your name" />
 
               <label htmlFor="profile-email">Email</label>
-              <input id="profile-email" type="email" placeholder="you@example.com" />
+              <input
+                id="profile-email"
+                type="email"
+                placeholder="you@example.com"
+              />
 
               <h2>Preferences</h2>
               <label htmlFor="preferred-role">Preferred job role</label>
               <input id="preferred-role" placeholder="e.g. Data Analyst" />
 
               <label htmlFor="preferred-location">Preferred location</label>
-              <input id="preferred-location" placeholder="e.g. Remote, California" />
+              <input
+                id="preferred-location"
+                placeholder="e.g. Remote, California"
+              />
 
               <button
                 className="primary-button"
-                onClick={() => window.alert("Connect a backend to save profile settings.")}
+                onClick={() =>
+                  window.alert("Connect a backend to save profile settings.")
+                }
               >
                 Save Changes
               </button>
