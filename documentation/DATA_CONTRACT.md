@@ -132,7 +132,8 @@ Stores a standardized job listing retrieved from an external source such as Adzu
 | `salary_min` | number or null | No | Annual salary | Minimum listed salary |
 | `salary_max` | number or null | No | Annual salary | Maximum listed salary |
 | `salary_currency` | string or null | No | Example: `USD` | Salary currency |
-| `description` | string | Yes | — | Full or available job description |
+| `salary_is_predicted` | boolean or null | No | `true`, `false`, or `null` | Whether the salary was predicted by the source |
+| `description` | string | Yes | — | Available job description or snippet provided by the source |
 | `date_posted` | date or null | No | `YYYY-MM-DD` | Original posting date |
 | `job_url` | string | Yes | Valid URL | Link to original listing |
 | `retrieved_at` | datetime | Yes | ISO 8601 | When the application retrieved the listing |
@@ -151,6 +152,7 @@ Stores a standardized job listing retrieved from an external source such as Adzu
   "salary_min": 75000,
   "salary_max": 90000,
   "salary_currency": "USD",
+  "salary_is_predicted": false,
   "description": "We are seeking a software engineer with Python and SQL experience.",
   "date_posted": "2026-10-18",
   "job_url": "https://example.com/jobs/123456",
