@@ -31,6 +31,10 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 The server will not start if a required setting is missing or invalid. The error names the setting but never shows its value.
 Nothing connects to the database yet, so the placeholder values in `.env.example` are enough to run the server locally.
 
+## Database setup
+
+The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
+
 ## Run the server
 
 ```bash
