@@ -33,7 +33,6 @@ export default function App() {
   const [jobTitleSearch, setJobTitleSearch] = useState("");
   const [jobLocation, setJobLocation] = useState("");
   const [workplaceType, setWorkplaceType] = useState("Any type");
-  const [education, setEducation] = useState("Any education");
   const [minSalary, setMinSalary] = useState(50000);
   const [maxSalary, setMaxSalary] = useState(150000);
 
@@ -56,19 +55,17 @@ export default function App() {
       .includes(jobLocation.toLowerCase());
 
     const matchesWorkplace =
-      workplaceType === "Any type" || job.workplace === workplaceType;
-
-    const matchesEducation =
-      education === "Any education" || job.education === education;
+      workplaceType === "Any type" ||
+      job.workplace_type === workplaceType.toLowerCase();
 
     const matchesSalary =
-      !job.salary || (job.salary >= minSalary && job.salary <= maxSalary);
+      (job.salary_min == null || job.salary_min <= maxSalary) &&
+      (job.salary_max == null || job.salary_max >= minSalary);
 
     return (
       matchesTitle &&
       matchesLocation &&
       matchesWorkplace &&
-      matchesEducation &&
       matchesSalary
     );
   });
@@ -203,22 +200,6 @@ export default function App() {
 
               <div className="posting-filters">
                 <div className="filter-field">
-                  <label htmlFor="education-filter">Education level</label>
-                  <select
-                    id="education-filter"
-                    value={education}
-                    onChange={(e) => setEducation(e.target.value)}
-                  >
-                    <option>Any education</option>
-                    <option>High School</option>
-                    <option>Associate's</option>
-                    <option>Bachelor's</option>
-                    <option>Master's</option>
-                    <option>Doctorate</option>
-                  </select>
-                </div>
-
-                <div className="filter-field">
                   <label htmlFor="workplace-filter">Workplace type</label>
                   <select
                     id="workplace-filter"
@@ -245,40 +226,43 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="filter-field slider-filter-field">
-                  <label>
-                    Min Salary: <strong>{formatSalaryLabel(minSalary)}</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min="30000"
-                    max="150000"
-                    step="5000"
-                    value={minSalary}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setMinSalary(val);
-                      if (val > maxSalary) setMaxSalary(val);
-                    }}
-                  />
-                </div>
+                {/* Min & Max Salary Sliders Side-by-Side */}
+                <div className="salary-filters-row">
+                  <div className="filter-field slider-filter-field">
+                    <label>
+                      Min Salary: <strong>{formatSalaryLabel(minSalary)}</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min="30000"
+                      max="150000"
+                      step="5000"
+                      value={minSalary}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setMinSalary(val);
+                        if (val > maxSalary) setMaxSalary(val);
+                      }}
+                    />
+                  </div>
 
-                <div className="filter-field slider-filter-field">
-                  <label>
-                    Max Salary: <strong>{formatSalaryLabel(maxSalary)}</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min="30000"
-                    max="150000"
-                    step="5000"
-                    value={maxSalary}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setMaxSalary(val);
-                      if (val < minSalary) setMinSalary(val);
-                    }}
-                  />
+                  <div className="filter-field slider-filter-field">
+                    <label>
+                      Max Salary: <strong>{formatSalaryLabel(maxSalary)}</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min="30000"
+                      max="150000"
+                      step="5000"
+                      value={maxSalary}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setMaxSalary(val);
+                        if (val < minSalary) setMinSalary(val);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -290,7 +274,7 @@ export default function App() {
               <div className="posting-results">
                 {filteredAvailableJobs.map((job) => (
                   <JobPostingCard
-                    key={job.id}
+                    key={job.job_id}
                     job={job}
                     onTrack={handleTrackJob}
                   />
