@@ -17,6 +17,7 @@ src/
 ├── App.css                      # Shared styling stylesheet for the app shell and components
 ├── App.jsx                      # Core layout wrapper, page state, router, and business logic
 └── main.jsx                     # React entry point rendering App into the DOM
+```
 
 # React + Vite
 
