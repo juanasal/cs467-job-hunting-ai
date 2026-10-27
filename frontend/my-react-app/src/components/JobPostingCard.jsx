@@ -1,14 +1,35 @@
-import { Briefcase, MapPin, DollarSign, GraduationCap } from "lucide-react";
+
+import { Briefcase, MapPin, DollarSign } from "lucide-react";
 
 export default function JobPostingCard({ job, onTrack }) {
-  // Format numeric salary to USD currency (e.g. $85,000)
-  const formattedSalary = job.salary
-    ? new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }).format(job.salary)
-    : null;
+  const formatSalary = (amount) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+
+  const salaryLabel = (() => {
+    const min = job.salary_min;
+    const max = job.salary_max;
+
+    if (min != null && max != null) {
+      return min === max
+        ? formatSalary(min)
+        : `${formatSalary(min)} – ${formatSalary(max)}`;
+    }
+
+    if (min != null) return `${formatSalary(min)}+`;
+    if (max != null) return `Up to ${formatSalary(max)}`;
+
+    return null;
+  })();
+
+  const workplaceLabels = {
+    remote: "Remote",
+    hybrid: "Hybrid",
+    onsite: "On-site",
+  };
 
   return (
     <article className="posting-card">
@@ -25,24 +46,27 @@ export default function JobPostingCard({ job, onTrack }) {
             <MapPin size={13} />
             {job.location}
           </span>
-          <span>{job.workplace}</span>
-          <span>{job.experience}</span>
-          {job.education && (
+
+          {job.workplace_type && (
             <span>
-              <GraduationCap size={13} />
-              {job.education}
+              {workplaceLabels[job.workplace_type] ??
+                job.workplace_type}
             </span>
           )}
-          {formattedSalary && (
+
+          {salaryLabel && (
             <span>
               <DollarSign size={13} />
-              {formattedSalary} / yr
+              {salaryLabel} / yr
             </span>
           )}
         </div>
       </div>
 
-      <button className="secondary-button" onClick={() => onTrack(job)}>
+      <button
+        className="secondary-button"
+        onClick={() => onTrack(job)}
+      >
         Track application
       </button>
     </article>
