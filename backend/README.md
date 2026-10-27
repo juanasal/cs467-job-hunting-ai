@@ -44,6 +44,9 @@ Run the Adzuna client tests from the `backend/` directory:
 python -m pytest tests/test_adzuna_client.py
 ```
 More details about the Adzuna API and our findings are documented in [`documentation/ADZUNA_RESEARCH.md`](../documentation/ADZUNA_RESEARCH.md).
+## Database setup
+
+The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
 
 ## Run the server
 
