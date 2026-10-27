@@ -1,5 +1,12 @@
 """Normalize raw Adzuna job listings into the shared job data contract."""
 
+# GenAI attribution:
+# Developed with assistance from ChatGPT (OpenAI).
+# Prompt: Help implement JH-027 by converting raw Adzuna API responses
+# into the project's shared job-data format and adding tests for the
+# required normalization and error-handling cases.
+# See the project Progress Report for the GenAI interaction transcript.
+
 import logging
 from datetime import datetime, timezone
 

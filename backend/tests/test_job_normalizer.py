@@ -1,5 +1,11 @@
 from app.job_normalizer import normalize_adzuna_job
 
+# GenAI attribution:
+# Developed with assistance from ChatGPT (OpenAI).
+# Prompt: Help implement JH-027 by converting raw Adzuna API responses
+# into the project's shared job-data format and adding tests for the
+# required normalization and error-handling cases.
+# See the project Progress Report for the GenAI interaction transcript.
 
 RETRIEVED_AT = "2026-10-27T19:00:00Z"
 
@@ -94,4 +100,3 @@ def test_onsite_description_is_not_misclassified_as_remote():
     result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
 
     assert result["workplace_type"] == "onsite"
-    
