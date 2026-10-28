@@ -206,10 +206,10 @@ export default function App() {
                     value={workplaceType}
                     onChange={(e) => setWorkplaceType(e.target.value)}
                   >
-                    <option>Any type</option>
-                    <option>Remote</option>
-                    <option>Hybrid</option>
-                    <option>On-site</option>
+                    <option value="Any type">Any type</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="onsite">On-site</option>
                   </select>
                 </div>
 
