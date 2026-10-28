@@ -6,6 +6,7 @@ import pytest
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pymysql.constants import CLIENT
 
 from app import db
 from app.config import ENV_FILE, get_settings
@@ -108,16 +109,19 @@ def test_failed_commit_returns_error_not_success(fake_conn, client):
     assert fake_conn.calls == ["commit", "rollback", "close"]
 
 
-def test_connect_uses_ssl_only_when_ca_is_set(monkeypatch):
+def test_connect_passes_expected_options(monkeypatch):
     captured = []
     monkeypatch.setattr(db.pymysql, "connect", lambda **kwargs: captured.append(kwargs))
 
     db.connect(get_settings(VALID_ENV))
     db.connect(get_settings({**VALID_ENV, "DB_SSL_CA": "/path/to/ca.pem"}))
 
+    # SSL only when a CA certificate is set.
     assert captured[0]["ssl"] is None
     assert captured[1]["ssl"] == {"ca": "/path/to/ca.pem"}
     assert captured[0]["autocommit"] is False
+    # UPDATE counts matched rows, so saving unchanged values returns 1, not 0.
+    assert captured[0]["client_flag"] & CLIENT.FOUND_ROWS
 
 
 # ---------------------------------------------------------------------------
