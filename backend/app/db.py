@@ -51,7 +51,12 @@ def transaction(settings):
         yield conn
         conn.commit()
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except pymysql.MySQLError:
+            # The connection is already gone, and MySQL undoes an unfinished
+            # transaction when a connection drops. Ignoring this keeps the original error.
+            pass
         raise
     finally:
         conn.close()

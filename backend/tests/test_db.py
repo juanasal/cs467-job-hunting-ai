@@ -24,8 +24,9 @@ VALID_ENV = {
 # Unit tests: a fake connection stands in for MySQL, so no database is needed.
 # ---------------------------------------------------------------------------
 class FakeConnection:
-    def __init__(self, fail_commit=False):
+    def __init__(self, fail_commit=False, fail_rollback=False):
         self.fail_commit = fail_commit
+        self.fail_rollback = fail_rollback
         self.calls = []
 
     def commit(self):
@@ -35,6 +36,8 @@ class FakeConnection:
 
     def rollback(self):
         self.calls.append("rollback")
+        if self.fail_rollback:
+            raise pymysql.InterfaceError(0, "")
 
     def close(self):
         self.calls.append("close")
@@ -74,6 +77,17 @@ def test_transaction_rolls_back_and_closes_on_error(fake_conn):
         with transaction(get_settings(VALID_ENV)):
             raise ValueError("step two failed")
     assert fake_conn.calls == ["rollback", "close"]
+
+
+def test_lost_connection_keeps_original_error(fake_conn):
+    # When the connection drops, rollback() fails too. The caller should still see
+    # the real cause, not the rollback's error.
+    fake_conn.fail_commit = True
+    fake_conn.fail_rollback = True
+    with pytest.raises(pymysql.OperationalError, match="commit failed"):
+        with transaction(get_settings(VALID_ENV)):
+            pass
+    assert fake_conn.calls == ["commit", "rollback", "close"]
 
 
 def test_request_connection_closes_after_success(fake_conn, client):
