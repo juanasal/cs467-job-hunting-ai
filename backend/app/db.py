@@ -36,6 +36,9 @@ def connect(settings):
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
         ssl=ssl,
+        # Make UPDATE report rows matched, not rows changed, so saving unchanged
+        # values still counts as 1 instead of looking like a missing row.
+        client_flag=pymysql.constants.CLIENT.FOUND_ROWS,
     )
 
 
@@ -89,7 +92,10 @@ def fetch_all(conn, sql, params=None):
 
 
 def execute(conn, sql, params=None):
-    """Run an INSERT, UPDATE, or DELETE and return the number of rows changed.
+    """Run an INSERT, UPDATE, or DELETE and return the number of rows it matched.
+
+    0 means no row matched (e.g. an UPDATE for an id that doesn't exist). An UPDATE
+    that matches a row but leaves its values the same still returns 1.
 
     The change is saved when the surrounding transaction commits. After an INSERT
     into a table with an AUTO_INCREMENT key, conn.insert_id() gives the new id.

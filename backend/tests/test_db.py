@@ -167,6 +167,26 @@ def test_add_and_read_made_up_record(test_db_settings, made_up_email):
     assert skills == [{"skill": tricky_skill}]
 
 
+def test_update_counts_matched_rows_not_changed_rows(test_db_settings, made_up_email):
+    with transaction(test_db_settings) as conn:
+        execute(
+            conn,
+            "INSERT INTO users (email, password_hash) VALUES (%s, %s)",
+            (made_up_email, "placeholder-not-a-real-hash"),
+        )
+        user_id = conn.insert_id()
+        execute(
+            conn,
+            "INSERT INTO user_profiles (user_id, education_level, experience_level) VALUES (%s, %s, %s)",
+            (user_id, "bachelor", "entry"),
+        )
+        update = "UPDATE user_profiles SET experience_level = %s WHERE user_id = %s"
+
+        # Saving the same values still finds the row, so a route won't send a false 404.
+        assert execute(conn, update, ("entry", user_id)) == 1
+        assert execute(conn, update, ("entry", 0)) == 0
+
+
 def test_failed_multi_step_update_saves_nothing(test_db_settings, made_up_email):
     with pytest.raises(pymysql.MySQLError):
         with transaction(test_db_settings) as conn:
