@@ -1,3 +1,4 @@
+USE jobhunt;
 -- 001_create_tables.sql
 -- Creates the MVP tables described in documentation/DATA_CONTRACT.md.
 -- Run once on an empty database (see backend/db/README.md).
