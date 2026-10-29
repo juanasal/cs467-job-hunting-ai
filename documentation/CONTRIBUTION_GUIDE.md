@@ -92,7 +92,15 @@ The pull request should include:
 
 ## 7. Review the Pull Request
 
-At least one teammate should review the pull request before merge when practical.
+Download all branches, tags, and commit history from al configured remote repos (The --prune flag deletes local references to remote branches that have already been deleted on the server, keeping your list clean), then merge updates into main.
+
+```bash
+git checkout main
+git fetch --all --prune
+git merge origin/main
+```
+
+At least two teammates should review the pull request before merge when practical.
 
 Reviewers should check:
 
