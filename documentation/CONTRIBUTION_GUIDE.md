@@ -50,6 +50,8 @@ docs/JH-001-contribution-guide
 
 Keep changes focused on the ticket being completed.
 
+Add or update relevant tests in the same pull request as the feature or fix. See the [Testing Guide](TESTING_GUIDE.md) for test selection, examples, and local commands.
+
 Before committing:
 
 - Run relevant tests.
