@@ -158,6 +158,14 @@ FROM user_sessions;
 
 Each successful login should increase the session count by one.
 
+## How to Test
+-In MySQL Workbench run CREATE DATABASE IF NOT EXISTS jobhunt;
+-Make sure env is set correctly with DB variables
+-Run python -m tests.test_db_connection
+-Start FastAPI backend with uvicorn app.main:app --reload
+-Open http://127.0.0.1:8000/docs 
+-Test user registraction and login with 'Try it out' button
+
 ## Implemented Functionality
 
 Database connectivity has been tested successfully. User registration, Argon2id password hashing, login credential verification, session token generation, SHA-256 token hashing, MySQL session creation, and HTTP-only session cookie creation have been implemented and tested.
