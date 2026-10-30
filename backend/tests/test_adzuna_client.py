@@ -219,7 +219,8 @@ def test_fetch_jobs_stops_when_results_are_empty():
     assert jobs[0]["title"] == "Job from page 1"
 
 
-def test_fetch_jobs_rejects_invalid_page_count():
+@pytest.mark.parametrize("pages", [0, -1])
+def test_fetch_jobs_rejects_invalid_page_count(pages):
     client = AdzunaClient(
         app_id="test-app-id",
         app_key="test-secret-key",
@@ -227,7 +228,7 @@ def test_fetch_jobs_rejects_invalid_page_count():
 
     with pytest.raises(ValueError, match="pages must be at least 1"):
         client.fetch_jobs(
-            pages=0,
+            pages=pages,
             what="software engineer",
         )
 
@@ -292,3 +293,66 @@ def test_request_error_does_not_expose_credentials():
     assert message == "Adzuna API request failed."
     assert "test-app-id" not in message
     assert "test-secret-key" not in message
+
+@pytest.mark.parametrize("status", [401, 429, 500])
+def test_http_failures_have_safe_errors(status):
+    def handler(request):
+        return httpx2.Response(status, text="test-secret-key", request=request)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as http_client:
+        client = AdzunaClient("test-app-id", "test-secret-key", http_client=http_client)
+        with pytest.raises(AdzunaRequestError, match="^Adzuna API request failed\\.$") as error:
+            client.fetch_jobs()
+    assert "test-secret-key" not in str(error.value)
+
+
+@pytest.mark.parametrize("failure", [httpx2.ConnectError, httpx2.ReadTimeout])
+def test_network_failures_have_safe_errors(failure):
+    def handler(request):
+        raise failure("request contained test-secret-key", request=request)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as http_client:
+        client = AdzunaClient("test-app-id", "test-secret-key", http_client=http_client)
+        with pytest.raises(AdzunaRequestError, match="^Adzuna API request failed\\.$") as error:
+            client.fetch_page()
+    assert "test-secret-key" not in str(error.value)
+
+
+@pytest.mark.parametrize("payload", [None, [], {}, {"results": None}, {"results": {}},
+                                     {"results": "bad"}, {"results": ["bad"]}])
+def test_invalid_response_shapes_are_rejected(payload):
+    def handler(request):
+        return httpx2.Response(200, content=json.dumps(payload), request=request)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as http_client:
+        client = AdzunaClient("test-app-id", "test-secret-key", http_client=http_client)
+        with pytest.raises(AdzunaRequestError, match="invalid response"):
+            client.fetch_jobs()
+
+
+def test_malformed_json_has_safe_error():
+    def handler(request):
+        return httpx2.Response(200, text="not-json test-secret-key", request=request)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as http_client:
+        client = AdzunaClient("test-app-id", "test-secret-key", http_client=http_client)
+        with pytest.raises(AdzunaRequestError, match="invalid response") as error:
+            client.fetch_page()
+    assert "test-secret-key" not in str(error.value)
+
+
+def test_pagination_stops_on_failure_without_returning_partial_results():
+    requested_pages = []
+
+    def handler(request):
+        page = int(request.url.path.split("/")[-1])
+        requested_pages.append(page)
+        if page == 2:
+            return httpx2.Response(429, request=request)
+        return httpx2.Response(200, json={"results": [{"id": str(page)}]}, request=request)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as http_client:
+        client = AdzunaClient("test-app-id", "test-secret-key", http_client=http_client)
+        with pytest.raises(AdzunaRequestError):
+            client.fetch_jobs(pages=3)
+    assert requested_pages == [1, 2]
