@@ -74,12 +74,24 @@ class AdzunaClient:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-        except Exception as exc:
+        except httpx2.HTTPError:
             raise AdzunaRequestError(
                 "Adzuna API request failed."
             ) from None
 
-        return response.json()
+        try:
+            data = response.json()
+        except ValueError:
+            raise AdzunaRequestError("Adzuna API returned an invalid response.") from None
+
+        if (
+            not isinstance(data, dict)
+            or not isinstance(data.get("results"), list)
+            or any(not isinstance(job, dict) for job in data["results"])
+        ):
+            raise AdzunaRequestError("Adzuna API returned an invalid response.")
+
+        return data
 
     def fetch_jobs(self, pages=1, **search_params):
         """Fetch job listings from multiple Adzuna result pages."""
