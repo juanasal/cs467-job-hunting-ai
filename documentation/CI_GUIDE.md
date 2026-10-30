@@ -6,6 +6,19 @@ The goal is simple: catch build errors and failed tests early.
 
 For ownership, test selection, examples, and local testing commands, see the [Testing Guide](TESTING_GUIDE.md). Developers should add or update relevant tests alongside their features in the same pull request.
 
+## Configured Checks
+
+The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to `main`, and manual dispatch from the Actions tab. It runs two independent jobs:
+
+| Job | Environment | Checks |
+| --- | --- | --- |
+| Backend tests | Python 3.13 on Ubuntu | Install `backend/requirements.txt` and run the complete pytest suite |
+| Frontend lint and build | Node.js 22 on Ubuntu | Install locked dependencies with `npm ci`, then run lint and the production build |
+
+Backend tests use fake settings and mocked Adzuna requests; no database, external API credentials, or GitHub Secrets are needed. The backend job uploads a JUnit test report as the `backend-test-results` artifact when available, including after test failures.
+
+Database integration, frontend component, and browser tests are not configured yet. Repository administrators must separately configure branch protection or rulesets if passing these jobs is to be required before merging; adding the workflow does not enforce that policy by itself.
+
 ## How It Works
 
 When a pull request is opened or updated, GitHub can automatically run checks such as:
@@ -99,8 +112,11 @@ Example:
 
 ### Frontend
 
+Run from `frontend/my-react-app/`:
+
 ```bash
 npm ci
+npm run lint
 npm run build
 ```
 
@@ -110,8 +126,10 @@ npm run build
 
 ### Backend
 
+After installing `backend/requirements.txt`, run from `backend/`:
+
 ```bash
-pytest
+python -m pytest
 ```
 
 `pytest` runs the Python test suite.

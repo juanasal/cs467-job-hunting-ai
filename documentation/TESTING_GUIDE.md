@@ -26,7 +26,7 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
-CI workflow configuration is separate from test development. Confirm which checks the repository actually runs; a command in documentation does not enable it in GitHub Actions.
+The [CI workflow](../.github/workflows/ci.yml) runs backend pytest tests and frontend lint/build checks on pull requests and pushes to `main`. It can also be started manually. Other test categories in this guide still require setup. See the [CI guide](CI_GUIDE.md) for environments, reports, and merge enforcement.
 
 ## 3. Choose Tests for the Change
 
