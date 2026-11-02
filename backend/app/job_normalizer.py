@@ -5,10 +5,11 @@
 # Prompt: Help implement JH-027 by converting raw Adzuna API responses
 # into the project's shared job-data format and adding tests for the
 # required normalization and error-handling cases.
-# See the project Progress Report for the GenAI interaction transcript.
+# GenAI usage is documented in the project Progress Report.
 
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,15 @@ def _detect_workplace_type(job):
         )
     ).lower()
 
+    hybrid_negative_phrases = (
+        "not a hybrid position",
+        "not hybrid",
+        "no hybrid",
+    )
+
     if "hybrid" in text:
+        if any(phrase in text for phrase in hybrid_negative_phrases):
+            return "unknown"
         return "hybrid"
 
     onsite_phrases = (
@@ -84,6 +93,38 @@ def _normalize_predicted_salary(value):
     return None
 
 
+def _normalize_salary(value):
+    """Convert salary values to numbers or None."""
+    if isinstance(value, bool):
+        return None
+
+    if isinstance(value, (int, float)):
+        return value
+
+    if isinstance(value, str):
+        try:
+            return float(value.strip())
+        except ValueError:
+            return None
+
+    return None
+
+
+def _normalize_url(value):
+    """Return a valid HTTP(S) URL or None."""
+    value = _clean_string(value)
+
+    if value is None:
+        return None
+
+    parsed = urlparse(value)
+
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return None
+
+    return value
+
+
 def _normalize_date(value):
     """Convert an Adzuna timestamp to YYYY-MM-DD when possible."""
     value = _clean_string(value)
@@ -99,10 +140,27 @@ def _normalize_date(value):
         return None
 
 
-def normalize_adzuna_job(job, retrieved_at=None):
-    """Convert one raw Adzuna job into the shared Job Posting format.
+def _normalize_timestamp(value):
+    """Return a valid ISO 8601 timestamp or None."""
+    value = _clean_string(value)
 
-    Return None when the record is missing fields required to make it usable.
+    if value is None:
+        return None
+
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+    return value
+
+
+def normalize_adzuna_job(job, retrieved_at=None):
+    """Convert one raw Adzuna job into a pre-insert Job Posting record.
+
+    The database-generated job_id is intentionally omitted and is assigned
+    when the normalized record is saved to the database. Return None when
+    the record is missing fields required to make it usable.
     """
     if not isinstance(job, dict):
         return None
@@ -114,7 +172,7 @@ def normalize_adzuna_job(job, retrieved_at=None):
     )
     title = _clean_string(job.get("title"))
     description = _clean_string(job.get("description"))
-    job_url = _clean_string(job.get("redirect_url"))
+    job_url = _normalize_url(job.get("redirect_url"))
 
     missing_required_fields = [
         field_name
@@ -140,6 +198,14 @@ def normalize_adzuna_job(job, retrieved_at=None):
             .isoformat()
             .replace("+00:00", "Z")
         )
+    else:
+        retrieved_at = _normalize_timestamp(retrieved_at)
+
+        if retrieved_at is None:
+            logger.warning(
+                "Skipping unusable Adzuna job: invalid retrieved_at timestamp"
+            )
+            return None
 
     return {
         "external_job_id": external_job_id,
@@ -148,8 +214,8 @@ def normalize_adzuna_job(job, retrieved_at=None):
         "company": _nested_display_name(job, "company"),
         "location": _nested_display_name(job, "location"),
         "workplace_type": _detect_workplace_type(job),
-        "salary_min": job.get("salary_min"),
-        "salary_max": job.get("salary_max"),
+        "salary_min": _normalize_salary(job.get("salary_min")),
+        "salary_max": _normalize_salary(job.get("salary_max")),
         "salary_currency": None,
         "salary_is_predicted": _normalize_predicted_salary(
             job.get("salary_is_predicted")

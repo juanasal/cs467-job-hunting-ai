@@ -5,7 +5,7 @@ from app.job_normalizer import normalize_adzuna_job
 # Prompt: Help implement JH-027 by converting raw Adzuna API responses
 # into the project's shared job-data format and adding tests for the
 # required normalization and error-handling cases.
-# See the project Progress Report for the GenAI interaction transcript.
+# GenAI usage is documented in the project Progress Report.
 
 RETRIEVED_AT = "2026-10-27T19:00:00Z"
 
@@ -100,3 +100,66 @@ def test_onsite_description_is_not_misclassified_as_remote():
     result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
 
     assert result["workplace_type"] == "onsite"
+
+
+def test_salary_values_are_normalized_to_numbers_or_none():
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "salary_min": "125000.50",
+        "salary_max": "not available",
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result["salary_min"] == 125000.50
+    assert result["salary_max"] is None
+
+
+def test_invalid_job_url_is_skipped(caplog):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "redirect_url": "not-a-valid-url",
+    }
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result is None
+    assert "missing required field(s): job_url" in caplog.text
+
+
+def test_invalid_retrieved_at_is_skipped(caplog):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(
+        raw_job,
+        retrieved_at="not-a-valid-timestamp",
+    )
+
+    assert result is None
+    assert "invalid retrieved_at timestamp" in caplog.text
+
+
+def test_negated_hybrid_description_returns_unknown():
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": (
+            "This is not a hybrid position. "
+            "Employees are expected to work from the assigned location."
+        ),
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result["workplace_type"] == "unknown"
