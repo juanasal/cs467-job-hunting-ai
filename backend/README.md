@@ -39,6 +39,7 @@ Adzuna is the external job-search API used to retrieve job listings for the appl
 
 - `app/adzuna_client.py` fetches job listings from Adzuna and supports search parameters, pagination, page limits, and request timeouts.
 - `tests/test_adzuna_client.py` tests the client using saved and simulated responses, so the tests do not require live API calls or Adzuna credentials.
+- HTTP/network failures raise `AdzunaRequestError` without exposing credentials. Malformed JSON or invalid result shapes also raise `AdzunaRequestError`; a valid response must contain a `results` list of job objects (an empty list is allowed). A later-page failure stops pagination and raises rather than returning partial results.
 
 Run the Adzuna client tests from the `backend/` directory:
 
@@ -99,6 +100,8 @@ TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
 ```
 
 Stop it with `docker stop jh-test-mysql` and start it again later with `docker start jh-test-mysql`. Never point `TEST_DB_*` at the shared or production database.
+
+The suite includes application startup with isolated fake environment settings, API error/validation handling, and Adzuna timeout, HTTP failure, malformed response, and pagination coverage. GitHub Actions runs the suite on Python 3.13; see the [CI guide](../documentation/CI_GUIDE.md) and [testing guide](../documentation/TESTING_GUIDE.md).
 
 ## Error format
 
