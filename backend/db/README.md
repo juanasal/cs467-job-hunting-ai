@@ -88,3 +88,7 @@ Deleting a user deletes all of their rows in the other tables. Deleting a job de
 
 - Deleting a job also deletes users' saved/applied rows for it, so don't delete expired jobs for now. To hide them later, we could add an `is_active` column, but `DATA_CONTRACT.md` must be updated first.
 - The data contract requires skills, job titles, and locations, but the database can't check that a user has at least one of each. The backend must check this before saving.
+
+## AI use
+
+The database code and documentation (JH-005: `migrations/001_create_tables.sql`, `seed/dev_seed.sql`, and this README) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/2KjzB62VP41MYZnzSA9vuH](https://claude.ai/artifact/2KjzB62VP41MYZnzSA9vuH) documents the GenAI interaction that led to my code.
