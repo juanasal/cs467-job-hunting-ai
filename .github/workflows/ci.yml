@@ -59,13 +59,13 @@ jobs:
             --host=127.0.0.1 \
             --port=3306 \
             --user=test_user \
-            test_db < db/001_create_tables.sql
+            test_db < db/migrations/001_create_tables.sql
           
           MYSQL_PWD=test_password mysql \
             --host=127.0.0.1 \
             --port=3306 \
             --user=test_user \
-            test_db < db/002_create_tables.sql
+            test_db < db/migrations/002_create_tables.sql
 
       - name: Verify database tables
         env:
