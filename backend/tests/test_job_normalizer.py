@@ -1,3 +1,6 @@
+
+import pytest
+
 from app.job_normalizer import normalize_adzuna_job
 
 # GenAI attribution:
@@ -157,6 +160,100 @@ def test_negated_hybrid_description_returns_unknown():
             "This is not a hybrid position. "
             "Employees are expected to work from the assigned location."
         ),
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result["workplace_type"] == "unknown"
+
+
+def test_non_finite_salary_values_become_none():
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "salary_min": "NaN",
+        "salary_max": "Infinity",
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result["salary_min"] is None
+    assert result["salary_max"] is None
+
+    raw_job["salary_min"] = "1e999"
+
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+
+    assert result["salary_min"] is None
+
+
+@pytest.mark.parametrize(
+    "invalid_url",
+    [
+        "https://exa mple.com/job",
+        "https://:443/job",
+        "https:///[broken",
+        "https://example.com:invalid/job",
+    ],
+)
+def test_malformed_job_urls_are_skipped(invalid_url, caplog):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "redirect_url": invalid_url,
+    }
+
+    result = normalize_adzuna_job(
+        raw_job,
+        retrieved_at=RETRIEVED_AT,
+    )
+
+    assert result is None
+    assert "missing required field(s): job_url" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "invalid_timestamp",
+    [
+        "2026-10-27",
+        "2026-10-27T19:00:00",
+    ],
+)
+def test_retrieved_at_requires_time_and_timezone(invalid_timestamp, caplog):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+
+    result = normalize_adzuna_job(
+        raw_job,
+        retrieved_at=invalid_timestamp,
+    )
+
+    assert result is None
+    assert "invalid retrieved_at timestamp" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "This is not a hybrid role.",
+        "Experience with hybrid cloud software is required.",
+        "This is a hybrid position and a fully remote position.",
+        "This is not a remote position.",
+    ],
+)
+def test_ambiguous_workplace_descriptions_return_unknown(description):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": description,
         "redirect_url": "https://www.adzuna.com/details/12345",
     }
 

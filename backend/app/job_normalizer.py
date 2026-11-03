@@ -1,3 +1,4 @@
+
 """Normalize raw Adzuna job listings into the shared job data contract."""
 
 # GenAI attribution:
@@ -8,6 +9,7 @@
 # GenAI usage is documented in the project Progress Report.
 
 import logging
+import math
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
@@ -35,7 +37,7 @@ def _nested_display_name(job, field):
 
 
 def _detect_workplace_type(job):
-    """Infer workplace type only when the listing provides clear evidence."""
+    """Infer workplace type only from clear work-arrangement phrases."""
     text = " ".join(
         filter(
             None,
@@ -46,16 +48,21 @@ def _detect_workplace_type(job):
         )
     ).lower()
 
-    hybrid_negative_phrases = (
-        "not a hybrid position",
-        "not hybrid",
-        "no hybrid",
+    hybrid_phrases = (
+        "hybrid position",
+        "hybrid role",
+        "hybrid work",
+        "hybrid schedule",
+        "hybrid working",
+        "hybrid arrangement",
     )
 
-    if "hybrid" in text:
-        if any(phrase in text for phrase in hybrid_negative_phrases):
-            return "unknown"
-        return "hybrid"
+    hybrid_negative_phrases = (
+        "not a hybrid",
+        "not hybrid",
+        "no hybrid",
+        "non-hybrid",
+    )
 
     onsite_phrases = (
         "onsite only",
@@ -66,9 +73,6 @@ def _detect_workplace_type(job):
         "on site position",
     )
 
-    if any(phrase in text for phrase in onsite_phrases):
-        return "onsite"
-
     remote_phrases = (
         "remote position",
         "fully remote",
@@ -76,10 +80,38 @@ def _detect_workplace_type(job):
         "work remotely",
     )
 
-    if any(phrase in text for phrase in remote_phrases):
-        return "remote"
+    remote_negative_phrases = (
+        "not a remote",
+        "not remote",
+        "no remote",
+        "non-remote",
+    )
 
-    return "unknown"
+    hybrid_match = (
+        any(phrase in text for phrase in hybrid_phrases)
+        and not any(phrase in text for phrase in hybrid_negative_phrases)
+    )
+
+    onsite_match = any(
+        phrase in text for phrase in onsite_phrases
+    )
+
+    remote_match = (
+        any(phrase in text for phrase in remote_phrases)
+        and not any(phrase in text for phrase in remote_negative_phrases)
+    )
+
+    matches = [
+        workplace_type
+        for workplace_type, matched in (
+            ("hybrid", hybrid_match),
+            ("onsite", onsite_match),
+            ("remote", remote_match),
+        )
+        if matched
+    ]
+
+    return matches[0] if len(matches) == 1 else "unknown"
 
 
 def _normalize_predicted_salary(value):
@@ -94,17 +126,20 @@ def _normalize_predicted_salary(value):
 
 
 def _normalize_salary(value):
-    """Convert salary values to numbers or None."""
+    """Convert finite salary values to numbers or None."""
     if isinstance(value, bool):
         return None
 
-    if isinstance(value, (int, float)):
-        return value
-
     if isinstance(value, str):
         try:
-            return float(value.strip())
+            value = float(value.strip())
         except ValueError:
+            return None
+
+    if isinstance(value, (int, float)):
+        try:
+            return value if math.isfinite(value) else None
+        except (OverflowError, ValueError):
             return None
 
     return None
@@ -117,9 +152,22 @@ def _normalize_url(value):
     if value is None:
         return None
 
-    parsed = urlparse(value)
+    if any(char.isspace() for char in value):
+        return None
 
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    try:
+        parsed = urlparse(value)
+
+        if parsed.scheme not in ("http", "https"):
+            return None
+
+        if not parsed.hostname:
+            return None
+
+        # Accessing port also checks for malformed port values.
+        _ = parsed.port
+
+    except ValueError:
         return None
 
     return value
@@ -141,15 +189,18 @@ def _normalize_date(value):
 
 
 def _normalize_timestamp(value):
-    """Return a valid ISO 8601 timestamp or None."""
+    """Return a valid ISO 8601 timestamp with timezone or None."""
     value = _clean_string(value)
 
-    if value is None:
+    if value is None or "T" not in value:
         return None
 
     try:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
+        return None
+
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
         return None
 
     return value
@@ -170,6 +221,7 @@ def normalize_adzuna_job(job, retrieved_at=None):
         if job.get("id") is not None
         else None
     )
+
     title = _clean_string(job.get("title"))
     description = _clean_string(job.get("description"))
     job_url = _normalize_url(job.get("redirect_url"))
