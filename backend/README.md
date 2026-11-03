@@ -94,6 +94,7 @@ docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
   -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
 # Wait about 20 seconds for MySQL to start, then:
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_sessions.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
   TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw pytest
