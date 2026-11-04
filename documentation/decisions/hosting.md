@@ -142,3 +142,7 @@ That choice belongs to the pipeline ticket, not this one. Adzuna's rate limits a
 - Render: [pricing](https://render.com/pricing), [free tier](https://render.com/docs/free), [compute plans](https://render.com/docs/compute-plans), [workspace members](https://render.com/docs/team-members), [workspace plans](https://render.com/docs/new-workspace-plans), [environment variables and secret files](https://render.com/docs/configure-environment-variables), [web services](https://render.com/docs/web-services), [cron jobs](https://render.com/docs/cronjobs), [Python version](https://render.com/docs/python-version), [outbound IPs](https://render.com/docs/outbound-ip-addresses)
 - Railway: [pricing](https://railway.com/pricing), [plans](https://docs.railway.com/reference/pricing/plans), [free trial](https://docs.railway.com/reference/pricing/free-trial), [app sleeping](https://docs.railway.com/reference/app-sleeping), [cron jobs](https://docs.railway.com/reference/cron-jobs)
 - Fly.io: [pricing](https://docs.fly.io/about/pricing), [fly.toml reference](https://docs.fly.io/reference/configuration), [task scheduling](https://fly.io/docs/blueprints/task-scheduling/)
+
+## AI use
+
+The hosting research and this decision document (JH-008) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/LkGsFyhLhJYt2Z7JpRsQNB](https://claude.ai/artifact/LkGsFyhLhJYt2Z7JpRsQNB) documents the GenAI interaction that led to this document.
