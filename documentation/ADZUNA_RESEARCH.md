@@ -96,7 +96,7 @@ Because the project plans to store and refresh Adzuna job data in its own databa
 The testing identified several items that should be considered before building features that depend on Adzuna data:
 
 - **Job descriptions:** The Search API provides description snippets rather than complete job descriptions. Confirm whether snippets are sufficient for the planned job matching and AI features.
-- **Remote status:** There is no structured remote/hybrid/onsite field in the tested results. Decide whether this information should be inferred from description text or treated as unavailable when it cannot be determined reliably.
+- **Remote status:** There is no structured remote/hybrid/onsite field in the tested results. For JH-027, the normalizer uses conservative phrase-based inference when the title or description provides clear evidence of remote, hybrid, or onsite work. If the workplace type is unclear or contradicted by the text, it is set to `unknown`.
 - **Salary:** Some salary values are predicted by Adzuna. Decide whether predicted salaries should be displayed or processed differently from non-predicted salaries.
 - **Optional fields:** Fields such as `contract_time` and `contract_type` are not consistently available. The data model should allow these fields to be missing.
 - **API access:** The current project account has limited test access. Confirm whether paid or otherwise approved API access will be needed for continued development and the final demo.

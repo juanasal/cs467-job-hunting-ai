@@ -46,7 +46,28 @@ Run the Adzuna client tests from the `backend/` directory:
 ```bash
 python -m pytest tests/test_adzuna_client.py
 ```
+
 More details about the Adzuna API and our findings are documented in [`documentation/ADZUNA_RESEARCH.md`](../documentation/ADZUNA_RESEARCH.md).
+
+## Adzuna job normalization
+
+`app/job_normalizer.py` converts raw Adzuna job listings into the project's shared job-data format before they are saved to the database.
+
+The normalizer:
+- validates required fields and skips unusable records;
+- converts salary values to numbers or `null`;
+- validates job URLs and retrieval timestamps;
+- normalizes posting dates and predicted salary values;
+- conservatively infers `remote`, `hybrid`, or `onsite` when the listing provides clear evidence, and otherwise uses `unknown`.
+
+The returned record does not include `job_id` because that value is generated when the job is inserted into the database.
+
+Run the normalizer tests from the `backend/` directory:
+
+```bash
+python -m pytest tests/test_job_normalizer.py
+```
+
 ## Database setup
 
 The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
