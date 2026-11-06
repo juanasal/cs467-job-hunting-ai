@@ -147,6 +147,7 @@ Create the tables once for this container, then run the tests:
 
 ```bash
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_sessions.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
   TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m pytest tests/test_db.py -v
