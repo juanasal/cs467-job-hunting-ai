@@ -98,8 +98,8 @@ Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes 
 uvicorn app.main:app --reload
 ```
 
-- Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) → `{"status": "ok"}` (does not check the database)
-- API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health check: http://127.0.0.1:8000/health → `{"status": "ok"}` (does not check the database)
+- API docs: http://127.0.0.1:8000/docs
 
 ## Run the tests
 
