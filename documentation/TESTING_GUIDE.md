@@ -20,13 +20,17 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 |---|---|---|
 | Backend | pytest, FastAPI TestClient, and mocked Adzuna requests | Extend tests under `backend/tests/` |
 | Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
-| Database | MySQL migration and development seed scripts | Add integration test fixtures and a disposable test database when implementing persistence |
+| Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
 | Recommendations | Data contract defines match results | Add scoring and quality tests alongside the matching engine |
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
-The [CI workflow](../.github/workflows/ci.yml) runs backend pytest tests and frontend lint/build checks on pull requests and pushes to `main`. It can also be started manually. Other test categories in this guide still require setup. See the [CI guide](CI_GUIDE.md) for environments, reports, and merge enforcement.
+The [CI workflow](../.github/workflows/ci.yml) runs backend pytest tests and frontend lint/build checks on pull requests and pushes to `main`. It can also be started manually.
+
+Database integration tests are available locally but require a separately configured MySQL test database. They are skipped when the required `TEST_DB_*` settings are not provided. A passing CI run does not, by itself, confirm that these MySQL integration tests were executed.
+
+See the [CI guide](CI_GUIDE.md) for environments, reports, and merge enforcement.
 
 ## 3. Choose Tests for the Change
 
@@ -36,7 +40,7 @@ Use the smallest test scope that meaningfully verifies the behavior. Add integra
 |---|---|---|
 | Calculation, transformation, or validation | Unit tests | Normalize missing salary to `None`; enforce score bounds |
 | API endpoint | API tests using TestClient | Validate request fields, status codes, response shape, and access rules |
-| Database schema or persistence | Integration tests against MySQL | Prevent duplicate source/job IDs and persist tracking changes |
+| Database schema or persistence | Integration tests against MySQL | Prevent duplicate source/job IDs and verify transaction rollback |
 | React component or form | Component tests once tooling exists | Validate preferences and display loading, empty, success, and error states |
 | Connected user workflow | End-to-end tests once tooling exists | Enter preferences, find jobs, save one, and confirm it remains after reload |
 | Matching algorithm | Unit tests and fixed evaluation cases | Rank a relevant job above an unrelated job for a known profile |
@@ -61,7 +65,7 @@ Test the agreed behavior. If a requirement is unclear, resolve it with the team 
 
 ### Example: Save a Job
 
-When this feature is implemented, its tests should verify that:
+When the user-facing job-saving feature is implemented, its tests should verify that:
 
 1. Saving creates the correct relationship for the authenticated user and job.
 2. Saving again follows the agreed duplicate-save behavior and leaves one current tracking record.
@@ -70,6 +74,8 @@ When this feature is implemented, its tests should verify that:
 5. The UI reports success and handles an API failure.
 
 Once the workflow is connected, add a browser test that saves a job, reloads, and confirms it remains saved.
+
+This user-facing save workflow is separate from JH-028, which inserts or updates job postings retrieved from external sources.
 
 ## 5. Write and Organize Backend Tests
 
@@ -107,6 +113,9 @@ Use these existing tests as starting points:
 
 - [test_main.py](../backend/tests/test_main.py): settings, health responses, and error privacy.
 - [test_adzuna_client.py](../backend/tests/test_adzuna_client.py): saved response data, request assertions, pagination, and mocked HTTP failures.
+- [test_job_normalizer.py](../backend/tests/test_job_normalizer.py): normalized job fields, missing values, timestamps, URLs, and workplace types.
+- [test_db.py](../backend/tests/test_db.py): database connection helpers and transaction behavior.
+- [test_job_repository.py](../backend/tests/test_job_repository.py): job upsert behavior, duplicate handling, timestamp validation, older imports, and database failures.
 
 For API tests, assert the relevant response body and side effects as well as the status code. The existing basic API tests skip startup. When testing startup/settings behavior, use `with TestClient(app) as client:` and provide fake environment settings so the application lifespan runs.
 
@@ -115,13 +124,33 @@ Keep tests independent: restore environment variables and other changes through 
 ## 6. Test Data and External Dependencies
 
 - Use fake accounts and synthetic profile/job data. Never use real user records or production credentials.
-- Mock Adzuna requests for ordinary tests. Saved responses are available in `documentation/samples/`; the current client tests show how to use `httpx2.MockTransport`.
+- Mock Adzuna requests for ordinary tests. Saved responses are available in `documentation/samples/`; the current client tests show how to use `httpx.MockTransport`.
 - Cover failures such as timeouts, HTTP 429/500 responses, invalid JSON, and unexpected response shapes where relevant to the client behavior.
 - Keep ordinary tests independent of live network services, paid AI calls, and changing external job listings.
 - If live-service smoke tests are added, run them separately with explicit configuration. They should not be required for ordinary local tests.
 - Control timestamps, randomness, and ordering when they affect assertions. Avoid arbitrary sleeps.
 
-For database integration tests, use a dedicated disposable MySQL database, apply migrations, and reset data between tests. Add a safeguard that refuses to run destructive test setup against development or production databases. Development seed data may help as a reference, but each test should establish the records it needs.
+### Database integration tests
+
+Database integration tests are implemented in `backend/tests/test_db.py` and `backend/tests/test_job_repository.py`.
+
+They use a separate MySQL test database configured through `TEST_DB_*` environment variables. Without these settings, the database-dependent tests are skipped.
+
+Use a dedicated disposable database, apply migrations in numerical order, and isolate test data. Never run destructive test operations against shared development or production databases.
+
+The job repository tests cover:
+
+- Inserting new job postings.
+- Updating existing postings without creating duplicates.
+- Identifying jobs by the combination of `source` and `external_job_id`.
+- Preserving `job_id` and `first_seen_at` during updates.
+- Preventing older imports from overwriting newer job details.
+- Validating retrieval timestamps.
+- Preserving existing records when an import fails and its transaction rolls back.
+
+Development seed data may help as a reference, but each test should establish the records it needs.
+
+For the MySQL setup and test environment commands, see the [backend README](../backend/README.md#run-the-tests).
 
 ## 7. Recommendation Testing
 
@@ -153,9 +182,26 @@ While developing, run a specific file or test:
 ```bash
 python -m pytest tests/test_adzuna_client.py
 python -m pytest tests/test_main.py::test_health_returns_ok
+python -m pytest tests/test_job_normalizer.py
+python -m pytest tests/test_job_repository.py -v
 ```
 
-These targeted commands also run from `backend/`. Existing backend tests do not require a live database or Adzuna credentials. Future database integration tests will need separately documented setup.
+These targeted commands also run from `backend/`.
+
+The backend unit tests do not require live database access or Adzuna credentials.
+
+The database integration tests run when a separate MySQL test database and the required `TEST_DB_*` settings are available. Otherwise, those tests are skipped.
+
+Follow the [backend README database test setup](../backend/README.md#run-the-tests) to start a local MySQL container, apply migrations, and configure the test database.
+
+After configuring the database, run:
+
+```bash
+python -m pytest tests/test_db.py tests/test_job_repository.py -v
+python -m pytest -q
+```
+
+Check the pytest output for skipped tests. A passing test suite with skipped database integration tests is not equivalent to running the full integration suite against MySQL.
 
 ### Frontend
 
