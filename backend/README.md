@@ -27,7 +27,7 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 | `DB_USER` | Yes | Database user |
 | `DB_PASSWORD` | Yes | Database password |
 | `DB_SSL_CA` | For Aiven | Path to the server's CA certificate (`ca.pem` from the Aiven console). Turns on SSL. |
-| `TEST_DB_*` | For DB tests | Separate test database used by `tests/test_db.py` (see [Run the tests](#run-the-tests)) |
+| `TEST_DB_*` | For DB tests | Separate test database used by `tests/test_db.py` and `tests/test_job_repository.py` (see [Run the tests](#run-the-tests)) |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | For Adzuna client | Adzuna API credentials |
 
 The server will not start if a required setting is missing or invalid. The error names the setting but never shows its value.
@@ -72,6 +72,8 @@ python -m pytest tests/test_job_normalizer.py
 
 The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
 
+Apply database migrations in numerical order. JH-028 adds `002_add_jobs_first_seen_at.sql`, which tracks when a job was first stored.
+
 ## Database helpers
 
 `app/db.py` handles connections so features don't repeat that code.
@@ -96,8 +98,8 @@ Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes 
 uvicorn app.main:app --reload
 ```
 
-- Health check: http://127.0.0.1:8000/health → `{"status": "ok"}` (does not check the database)
-- API docs: http://127.0.0.1:8000/docs
+- Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) → `{"status": "ok"}` (does not check the database)
+- API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ## Run the tests
 
@@ -105,7 +107,7 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-The tests do not need a `.env` file or a database. The database integration tests in `tests/test_db.py` are skipped unless `TEST_DB_*` settings are set.
+The tests do not need a `.env` file or a database. The database integration tests in `tests/test_db.py` and `tests/test_job_repository.py` are skipped unless `TEST_DB_*` settings are set.
 
 To run them, start a throwaway MySQL in Docker, create the tables, and set the test settings (in `backend/.env` or your shell). The password below is only for this local container:
 
@@ -115,6 +117,7 @@ docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
   -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
 # Wait about 20 seconds for MySQL to start, then:
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
   TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw pytest

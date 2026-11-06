@@ -5,7 +5,8 @@ SQL scripts that create and update the MySQL database. The tables follow the fie
 ```text
 backend/db/
 ├── migrations/          # numbered change scripts, run in order
-│   └── 001_create_tables.sql
+│   ├── 001_create_tables.sql
+│   └── 002_add_jobs_first_seen_at.sql
 └── seed/
     └── dev_seed.sql     # made-up example data, development only
 ```
@@ -17,6 +18,7 @@ Use the same values as in `backend/.env`. The commands are run from the repo roo
 ```bash
 # 1. Create the tables (run every migration in number order)
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/001_create_tables.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_add_jobs_first_seen_at.sql
 
 # 2. (Optional) Load the example data
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
