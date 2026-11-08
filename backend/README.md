@@ -27,11 +27,10 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 | `DB_USER` | Yes | Database user |
 | `DB_PASSWORD` | Yes | Database password |
 | `DB_SSL_CA` | For Aiven | Path to the server's CA certificate (`ca.pem` from the Aiven console). Turns on SSL. |
-| `TEST_DB_*` | For DB tests | Separate test database used by `tests/test_db.py` (see [Run the tests](#run-the-tests)) |
+| `TEST_DB_*` | For DB tests | Separate test database used by `tests/test_db.py` and `tests/test_job_repository.py` (see [Run the tests](#run-the-tests)) |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | For Adzuna client | Adzuna API credentials |
 
 The server will not start if a required setting is missing or invalid. The error names the setting but never shows its value.
-Nothing connects to the database yet, so the placeholder values in `.env.example` are enough to run the server locally.
 
 ## Adzuna job client
 
@@ -72,6 +71,8 @@ python -m pytest tests/test_job_normalizer.py
 
 The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
 
+Apply database migrations in numerical order. JH-028 adds `002_add_jobs_first_seen_at.sql`, which tracks the retrieval timestamp of the first stored observation of a job.
+
 ## Database helpers
 
 `app/db.py` handles connections so features don't repeat that code.
@@ -90,6 +91,37 @@ def read_job(job_id: int, conn: DbConnection):
 
 Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes *before* sending the response, so a failed save returns an error instead of a false success.
 
+## Job repository
+
+`app/job_repository.py` provides `upsert_job(conn, job)` to save normalized job postings without creating duplicates.
+
+Jobs are identified by the combination of `source` and `external_job_id`. New jobs are inserted, while existing jobs are updated when newer data is retrieved.
+
+The repository preserves the existing `job_id` and `first_seen_at` values. Older imports do not overwrite newer job details or retrieval timestamps.
+
+Use `upsert_job()` inside a database transaction:
+
+```python
+from app.config import get_settings
+from app.db import transaction
+from app.job_repository import upsert_job
+
+with transaction(get_settings()) as conn:
+    job_id = upsert_job(conn, normalized_job)
+```
+
+Here, `normalized_job` is the dictionary returned by the job normalizer.
+
+The transaction commits when the block completes successfully. If an error occurs, the transaction rolls back, preserving previously stored data.
+
+Run the job repository tests from the `backend/` directory:
+
+```bash
+python -m pytest tests/test_job_repository.py -v
+```
+
+These tests cover inserting new jobs, updating existing jobs, preventing duplicates, handling older imports, timestamp validation, and database failures.
+
 ## Run the server
 
 ```bash
@@ -105,7 +137,7 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-The tests do not need a `.env` file or a database. The database integration tests in `tests/test_db.py` are skipped unless `TEST_DB_*` settings are set.
+The tests do not need a `.env` file or a database. The database integration tests in `tests/test_db.py` and `tests/test_job_repository.py` are skipped unless `TEST_DB_*` settings are set.
 
 ### Install and start Docker (first time only)
 
@@ -131,8 +163,12 @@ Start a throwaway MySQL in Docker, create the tables, and set the test settings 
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
-  -e MYSQL_ROOT_PASSWORD=local_root_pw -e MYSQL_DATABASE=job_hunting_ai_test \
-  -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
+  -e MYSQL_ROOT_PASSWORD=local_root_pw \
+  -e MYSQL_DATABASE=job_hunting_ai_test \
+  -e MYSQL_USER=jh_test \
+  -e MYSQL_PASSWORD=local_test_pw \
+  mysql:8.4
+
 ```
 
 The first run downloads the MySQL image. Check whether MySQL is ready:
@@ -147,12 +183,14 @@ Create the tables once for this container, then run the tests:
 
 ```bash
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
-  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m pytest tests/test_db.py -v
+  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw \
+  python -m pytest -q
 ```
 
-This runs 7 unit tests and 3 integration tests. Without the test database settings, the 3 integration tests are skipped. Use `python -m pytest` instead of the final command's test-file selection to run the entire suite with the same settings.
+This runs the full backend test suite, including database integration tests when the separate MySQL test database is configured. Without the `TEST_DB_*` settings, database integration tests are skipped. Check the pytest output to confirm that the integration tests ran rather than being skipped.
 
 Stop it with `docker stop jh-test-mysql` and start it again later with `docker start jh-test-mysql`. On subsequent runs, start Docker Desktop and the existing container, check readiness, and rerun the test command; do not recreate the container or reapply the initial migration. If the container name is already in use, use `docker start` instead of `docker run`. If port `3307` is occupied, choose another host port in `-p` and use that same port for `TEST_DB_PORT`. Never point `TEST_DB_*` at the shared or production database.
 
