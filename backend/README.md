@@ -239,3 +239,9 @@ All error responses use the same JSON shape:
 ```
 
 Request validation errors (422) also include a `details` list with the location and reason for each problem. Unexpected server errors return a generic `500` message so internal details aren't exposed.
+
+## AI use
+
+The FastAPI starter app (JH-004: `app/main.py`, `app/config.py`, `tests/test_main.py`, and the setup, settings, server, test, and error-format sections of this README) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/3RvCU2Xy81gspyqaBzijSs](https://claude.ai/artifact/3RvCU2Xy81gspyqaBzijSs) documents the GenAI interaction that led to my code.
+
+The database helpers (JH-006: `app/db.py`, the `DB_SSL_CA` setting in `app/config.py`, `tests/test_db.py`, and the database helpers and test database sections of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/WMYqeJ8Qys4vLCKxaAGtpN](https://claude.ai/artifact/WMYqeJ8Qys4vLCKxaAGtpN) documents the GenAI interaction that led to my code.
