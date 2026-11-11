@@ -55,12 +55,16 @@ def connect(settings):
 
 
 @contextmanager
-def get_db_connection():
+def get_db_connection(settings=None):
     """Open a MySQL connection and always close it.
 
+    Uses the application's settings by default, or supplied settings
+    when connecting to a specific database (such as a test database).
     Does not automatically commit or roll back transactions.
     """
-    settings = get_settings()
+    if settings is None:
+        settings = get_settings()
+
     connection = connect(settings)
 
     try:
