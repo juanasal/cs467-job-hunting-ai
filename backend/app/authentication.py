@@ -1,30 +1,38 @@
+
 import hashlib
 import os
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
-from mysql.connector import IntegrityError
+
+import pymysql.cursors
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from pydantic import BaseModel, Field
 from pwdlib import PasswordHash
-import pymysql.cursors
+from pymysql.err import IntegrityError
 
+from app.config import get_frontend_origins
 from app.db import get_db_connection
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-# Explicitly use Argon2id via pwdlib configuration/recommended factory
+# Explicitly use Argon2id via pwdlib configuration/recommended factory.
 password_hash = PasswordHash.recommended()
 
-# Configuration constants from layout guidelines
+# Session configuration.
 IDLE_TIMEOUT_MINUTES = 30
 MAX_SESSION_DAYS = 7
 PRODUCTION = os.getenv("APP_ENV") == "production"
 COOKIE_NAME = "__Host-session" if PRODUCTION else "session"
-TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "https://yourdomain.com",  # Update with frontend origin
-]
 
 
 class RegisterRequest(BaseModel):
@@ -39,11 +47,13 @@ class LoginRequest(BaseModel):
 
 def normalize_email(email: str) -> str:
     email = email.strip().lower()
+
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Enter a valid email address.",
         )
+
     return email
 
 
@@ -56,7 +66,7 @@ def get_current_user(
 ) -> dict:
     """
     Validates server-side sessions stored in MySQL.
-    Enforces absolute lifetime (7 days) and idle timeout (30 mins).
+    Enforces absolute lifetime (7 days) and idle timeout (30 minutes).
     Slides the window by updating last_activity_at on successful activity.
     """
     if not session:
@@ -71,18 +81,21 @@ def get_current_user(
     try:
         with get_db_connection() as connection:
             cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
+
             try:
                 cursor.execute(
                     """
-                    SELECT s.session_id, s.user_id, s.created_at, 
+                    SELECT s.session_id, s.user_id, s.created_at,
                            s.last_activity_at, s.expires_at,
                            u.email
                     FROM user_sessions s
                     JOIN users u ON s.user_id = u.user_id
                     WHERE s.token_hash = %s
+                      AND s.revoked_at IS NULL
                     """,
                     (token_hash,),
                 )
+
                 db_session = cursor.fetchone()
 
                 if not db_session:
@@ -91,28 +104,43 @@ def get_current_user(
                         detail="Invalid or revoked session.",
                     )
 
-                # 1. Check absolute expiration (Max session lifetime: 7 days)
+                # 1. Check absolute expiration (maximum session lifetime: 7 days).
                 if db_session["expires_at"] <= now:
-                    cursor.execute("DELETE FROM user_sessions WHERE session_id = %s", (db_session["session_id"],))
+                    cursor.execute(
+                        "DELETE FROM user_sessions WHERE session_id = %s",
+                        (db_session["session_id"],),
+                    )
                     connection.commit()
+
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Session has expired.",
                     )
 
-                # 2. Check idle timeout (30 minutes)
-                idle_limit = db_session["last_activity_at"] + timedelta(minutes=IDLE_TIMEOUT_MINUTES)
+                # 2. Check idle timeout (30 minutes).
+                idle_limit = db_session["last_activity_at"] + timedelta(
+                    minutes=IDLE_TIMEOUT_MINUTES
+                )
+
                 if idle_limit <= now:
-                    cursor.execute("DELETE FROM user_sessions WHERE session_id = %s", (db_session["session_id"],))
+                    cursor.execute(
+                        "DELETE FROM user_sessions WHERE session_id = %s",
+                        (db_session["session_id"],),
+                    )
                     connection.commit()
+
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Session timed out due to inactivity.",
                     )
 
-                # 3. Update sliding last_activity_at window
+                # 3. Update sliding last_activity_at window.
                 cursor.execute(
-                    "UPDATE user_sessions SET last_activity_at = %s WHERE session_id = %s",
+                    """
+                    UPDATE user_sessions
+                    SET last_activity_at = %s
+                    WHERE session_id = %s
+                    """,
                     (now, db_session["session_id"]),
                 )
                 connection.commit()
@@ -124,34 +152,42 @@ def get_current_user(
 
             finally:
                 cursor.close()
+
     except HTTPException:
         raise
+
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during session validation.",
-        )
+        ) from None
 
 
 def verify_csrf_and_origin(
     request: Request,
     x_csrf_token: str | None = Header(default=None),
-    csrf_cookie: str | None = Cookie(default=None, alias="csrf_token")
+    csrf_cookie: str | None = Cookie(default=None, alias="csrf_token"),
 ):
     """
-    Validates Origin header against trusted frontend origins and 
+    Validates the Origin header against configured frontend origins and
     enforces Double Submit Cookie verification for state-changing requests.
     """
-    # Origin validation for state-changing endpoints
     origin = request.headers.get("Origin")
-    if origin and origin not in TRUSTED_ORIGINS:
+    trusted_origins = get_frontend_origins()
+
+    # Require an Origin header and reject origins not explicitly trusted.
+    if not origin or origin not in trusted_origins:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Untrusted origin header.",
+            detail="Untrusted or missing origin header.",
         )
 
-    # CSRF Token validation via Double Submit Cookie check
-    if not x_csrf_token or not csrf_cookie or not secrets.compare_digest(x_csrf_token, csrf_cookie):
+    # CSRF Token validation via Double Submit Cookie check.
+    if (
+        not x_csrf_token
+        or not csrf_cookie
+        or not secrets.compare_digest(x_csrf_token, csrf_cookie)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="CSRF token validation failed.",
@@ -165,14 +201,20 @@ def verify_csrf_and_origin(
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(request: RegisterRequest):
     email = normalize_email(request.email)
-    # Hashed via Argon2id through pwdlib[argon2]
+
+    # Hashed via Argon2id through pwdlib[argon2].
     hashed_password = password_hash.hash(request.password)
 
     try:
         with get_db_connection() as connection:
             cursor = connection.cursor()
+
             try:
-                cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
+                cursor.execute(
+                    "SELECT user_id FROM users WHERE email = %s",
+                    (email,),
+                )
+
                 if cursor.fetchone():
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
@@ -184,19 +226,27 @@ def register(request: RegisterRequest):
                     INSERT INTO users (email, password_hash, created_at)
                     VALUES (%s, %s, %s)
                     """,
-                    (email, hashed_password, datetime.now(timezone.utc).replace(tzinfo=None)),
+                    (
+                        email,
+                        hashed_password,
+                        datetime.now(timezone.utc).replace(tzinfo=None),
+                    ),
                 )
+
                 user_id = cursor.lastrowid
                 connection.commit()
 
             except IntegrityError:
                 connection.rollback()
+
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="An account with this email already exists.",
                 ) from None
+
             finally:
                 cursor.close()
+
     except HTTPException:
         raise
 
@@ -213,44 +263,58 @@ def login(request: LoginRequest, response: Response):
     try:
         with get_db_connection() as connection:
             cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
+
             try:
                 cursor.execute(
-                    "SELECT user_id, email, password_hash FROM users WHERE email = %s",
+                    """
+                    SELECT user_id, email, password_hash
+                    FROM users
+                    WHERE email = %s
+                    """,
                     (email,),
                 )
+
                 user = cursor.fetchone()
 
-                if not user or not password_hash.verify(request.password, user["password_hash"]):
+                if not user or not password_hash.verify(
+                    request.password, user["password_hash"]
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Invalid email or password.",
                     )
 
-                # Generate session and CSRF tokens
+                # Generate session and CSRF tokens.
                 session_token = secrets.token_urlsafe(32)
-                token_hash = hashlib.sha256(session_token.encode("utf-8")).hexdigest()
+
+                token_hash = hashlib.sha256(
+                    session_token.encode("utf-8")
+                ).hexdigest()
+
                 csrf_token = secrets.token_urlsafe(32)
 
                 now = datetime.now(timezone.utc).replace(tzinfo=None)
                 expires_at = now + timedelta(days=MAX_SESSION_DAYS)
 
-                # Store session in MySQL (allows multiple sessions per user)
+                # Store session in MySQL (allows multiple sessions per user).
                 cursor.execute(
                     """
-                    INSERT INTO user_sessions 
+                    INSERT INTO user_sessions
                         (user_id, token_hash, created_at, last_activity_at, expires_at)
                     VALUES (%s, %s, %s, %s, %s)
                     """,
                     (user["user_id"], token_hash, now, now, expires_at),
                 )
+
                 connection.commit()
 
             finally:
                 cursor.close()
+
     except HTTPException:
         raise
 
-    # Set Session Cookie matching layout rules (HttpOnly, Secure, Lax, Path=/)
+    # Set session cookie.
     response.set_cookie(
         key=COOKIE_NAME,
         value=session_token,
@@ -261,7 +325,7 @@ def login(request: LoginRequest, response: Response):
         max_age=MAX_SESSION_DAYS * 24 * 60 * 60,
     )
 
-    # Set CSRF Token Cookie (readable by client JS to echo back in headers)
+    # Set CSRF token cookie (readable by client JavaScript).
     response.set_cookie(
         key="csrf_token",
         value=csrf_token,
@@ -285,10 +349,14 @@ def get_me(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/csrf")
-def get_csrf_token(response: Response, csrf_cookie: str | None = Cookie(default=None, alias="csrf_token")):
+def get_csrf_token(
+    response: Response,
+    csrf_cookie: str | None = Cookie(default=None, alias="csrf_token"),
+):
     """Ensure a CSRF token cookie exists and return it for client use."""
     if not csrf_cookie:
         csrf_token = secrets.token_urlsafe(32)
+
         response.set_cookie(
             key="csrf_token",
             value=csrf_token,
@@ -298,7 +366,9 @@ def get_csrf_token(response: Response, csrf_cookie: str | None = Cookie(default=
             path="/",
             max_age=MAX_SESSION_DAYS * 24 * 60 * 60,
         )
+
         return {"csrf_token": csrf_token}
+
     return {"csrf_token": csrf_cookie}
 
 
@@ -306,7 +376,7 @@ def get_csrf_token(response: Response, csrf_cookie: str | None = Cookie(default=
 def logout(
     response: Response,
     current_user: dict = Depends(get_current_user),
-    session: str | None = Cookie(default=None, alias=COOKIE_NAME)
+    session: str | None = Cookie(default=None, alias=COOKIE_NAME),
 ):
     """
     Revokes the current session from MySQL database and clears browser cookies.
@@ -314,17 +384,47 @@ def logout(
     """
     if session:
         token_hash = hashlib.sha256(session.encode("utf-8")).hexdigest()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
         try:
             with get_db_connection() as connection:
                 cursor = connection.cursor()
-                cursor.execute("DELETE FROM user_sessions WHERE token_hash = %s", (token_hash,))
-                connection.commit()
-                cursor.close()
-        except Exception:
-            pass
 
-    # Clear authentication and CSRF cookies matching original parameters
-    response.delete_cookie(key=COOKIE_NAME, path="/", secure=PRODUCTION, samesite="lax")
-    response.delete_cookie(key="csrf_token", path="/", secure=PRODUCTION, samesite="lax")
+                try:
+                    cursor.execute(
+                        """
+                        UPDATE user_sessions
+                        SET revoked_at = %s
+                        WHERE token_hash = %s
+                          AND revoked_at IS NULL
+                        """,
+                        (now, token_hash),
+                    )
+
+                    connection.commit()
+
+                finally:
+                    cursor.close()
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to log out. Please try again.",
+            ) from None
+
+    # Clear authentication and CSRF cookies.
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        secure=PRODUCTION,
+        samesite="lax",
+    )
+
+    response.delete_cookie(
+        key="csrf_token",
+        path="/",
+        secure=PRODUCTION,
+        samesite="lax",
+    )
 
     return {"message": "Logged out successfully."}
