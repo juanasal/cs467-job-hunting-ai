@@ -21,17 +21,19 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `DB_HOST` | Yes | MySQL host |
+| `DB_HOST` | Yes | MySQL host for the application |
 | `DB_PORT` | Yes | MySQL port (whole number, e.g. `3306`) |
-| `DB_NAME` | Yes | Database name |
-| `DB_USER` | Yes | Database user |
-| `DB_PASSWORD` | Yes | Database password |
+| `DB_NAME` | Yes | Application database name |
+| `DB_USER` | Yes | Application database user |
+| `DB_PASSWORD` | Yes | Application database password |
 | `DB_SSL_CA` | For Aiven | Path to the server's CA certificate (`ca.pem` from the Aiven console). Turns on SSL. |
-| `TEST_DB_*` | For DB tests | Separate test database used by `tests/test_db.py` (see [Run the tests](#run-the-tests)) |
+| `TEST_DB_*` | For DB tests | Separate test database used by database integration tests (see [Run the tests](#run-the-tests)) |
+| `FRONTEND_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Defaults to `http://localhost:3000`. |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | For Adzuna client | Adzuna API credentials |
 
-The server will not start if a required setting is missing or invalid. The error names the setting but never shows its value.
-Nothing connects to the database yet, so the placeholder values in `.env.example` are enough to run the server locally.
+The server requires valid `DB_*` settings at startup. Authentication routes also use these application database settings. `TEST_DB_*` settings are separate and are only used by database integration tests.
+
+The error names a missing or invalid setting but never shows its value.
 
 ## Adzuna job client
 
@@ -46,10 +48,12 @@ Run the Adzuna client tests from the `backend/` directory:
 ```bash
 python -m pytest tests/test_adzuna_client.py
 ```
+
 More details about the Adzuna API and our findings are documented in [`documentation/ADZUNA_RESEARCH.md`](../documentation/ADZUNA_RESEARCH.md).
+
 ## Database setup
 
-The SQL scripts that create the tables, plus made-up example data, are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
+The SQL scripts that create the tables and example data are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
 
 ## Database helpers
 
@@ -67,7 +71,7 @@ def read_job(job_id: int, conn: DbConnection):
     return fetch_one(conn, "SELECT * FROM jobs WHERE job_id = %s", (job_id,))
 ```
 
-Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes *before* sending the response, so a failed save returns an error instead of a false success.
+Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes before sending the response, so a failed save returns an error instead of a false success.
 
 ## Run the server
 
@@ -75,29 +79,30 @@ Use `DbConnection` rather than `Depends(get_db)`. It makes FastAPI save changes 
 uvicorn app.main:app --reload
 ```
 
-- Health check: http://127.0.0.1:8000/health → `{"status": "ok"}` (does not check the database)
-- API docs: http://127.0.0.1:8000/docs
+- Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) → `{"status": "ok"}` (does not check the database)
+- API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ## Run the tests
 
 ```bash
-pytest
+python -m pytest
 ```
 
-The tests do not need a `.env` file or a database. The database integration tests in `tests/test_db.py` are skipped unless `TEST_DB_*` settings are set.
+The tests do not require a database by default. Database integration tests are skipped unless the `TEST_DB_*` settings are configured.
 
-To run them, start a throwaway MySQL in Docker, create the tables, and set the test settings (in `backend/.env` or your shell). The password below is only for this local container:
+To run them, start a throwaway MySQL instance in Docker, apply both migrations, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
   -e MYSQL_ROOT_PASSWORD=local_root_pw -e MYSQL_DATABASE=job_hunting_ai_test \
   -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
+
 # Wait about 20 seconds for MySQL to start, then:
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
-docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_sessions.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_tables.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
-  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw pytest
+  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m pytest
 ```
 
 Stop it with `docker stop jh-test-mysql` and start it again later with `docker start jh-test-mysql`. Never point `TEST_DB_*` at the shared or production database.
