@@ -5,7 +5,8 @@ SQL scripts that create and update the MySQL database. The tables follow the fie
 ```text
 backend/db/
 ├── migrations/          # numbered change scripts, run in order
-│   └── 001_create_tables.sql
+│   ├── 001_create_tables.sql
+│   └── 002_create_tables.sql
 └── seed/
     └── dev_seed.sql     # made-up example data, development only
 ```
@@ -17,12 +18,13 @@ Use the same values as in `backend/.env`. The commands are run from the repo roo
 ```bash
 # 1. Create the tables (run every migration in number order)
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/001_create_tables.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_create_tables.sql
 
 # 2. (Optional) Load the example data
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
 ```
 
-For Aiven, also add `--ssl-mode=REQUIRED`. If you'd rather use a GUI, open each file in MySQL Workbench and run it against the database.
+For Aiven, also add `--ssl-mode=REQUIRED`. If you'd rather use a GUI, open each migration file in MySQL Workbench and run it against the database.
 
 Never load `dev_seed.sql` into a database that holds real users.
 
@@ -31,7 +33,7 @@ Never load `dev_seed.sql` into a database that holds real users.
 ## Changing the schema
 
 1. **Never edit a migration that has already been merged.** Teammates have already run it, so their databases wouldn't get your edit.
-2. Add a new file with the next number and a short name, for example `002_add_job_category.sql`. It should change the existing tables (`ALTER TABLE ...`, `CREATE TABLE ...`) rather than recreate them.
+2. Add a new file with the next number and a short name, for example `003_add_job_category.sql`. It should change the existing tables (`ALTER TABLE ...`, `CREATE TABLE ...`) rather than recreate them.
 3. If the change adds or renames a field, update `documentation/DATA_CONTRACT.md` in the same pull request.
 4. Update `dev_seed.sql` if the example data no longer fits.
 5. Say in the PR description which new script teammates need to run.
@@ -53,6 +55,11 @@ After pulling `main`, run any migration files you haven't run yet, in number ord
 | `match_results` | `user_id`, `job_id` | Score (0–100), explanation, created time | One current result per user/job |
 | `match_result_skills` | `user_id`, `job_id`, `skill` | Skills that matched for a result | Same skill once per result |
 | `job_tracking` | `user_id`, `job_id` | `saved` / `dismissed` / `applied` status | One current status per user/job |
+| `user_sessions` | `session_id` | Hashed session token, creation/activity times, expiration, and revocation status | `token_hash` is unique |
+
+The `user_sessions` table stores authentication sessions. Each session belongs to one user through `user_id`. The `token_hash` column stores the hashed session token rather than the raw token. `last_activity_at` supports idle-timeout tracking, `expires_at` stores the session expiration time, and `revoked_at` records whether a session has been revoked.
+
+The table has indexes on `user_id` and `expires_at` to support session lookups and expiration checks. Deleting a user also deletes their sessions through the foreign key's `ON DELETE CASCADE` rule.
 
 Text comparisons are case-insensitive, so `SQL` and `sql` count as the same skill.
 
@@ -73,9 +80,10 @@ erDiagram
     match_results ||--o{ match_result_skills : "lists"
     users ||--o{ job_tracking : "tracks"
     jobs  ||--o{ job_tracking : "tracked in"
+    users ||--o{ user_sessions : "has"
 ```
 
-Deleting a user deletes all of their rows in the other tables. Deleting a job deletes its match results and tracking rows.
+Deleting a user deletes all of their rows in the other tables, including their authentication sessions. Deleting a job deletes its match results and tracking rows.
 
 ## Conventions
 
