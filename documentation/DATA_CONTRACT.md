@@ -45,6 +45,46 @@ Passwords must never be returned through the API.
 
 ---
 
+---
+User Sessions
+
+Stores active and historical login sessions for authenticated users.
+
+| Field | Type | Required | Allowed Values / Format | Description |
+|---|---|---:|---|---|
+| `session_id` | integer | Yes | Positive integer | Internal unique session identifier |
+| `user_id` | integer | Yes | Existing user ID | User who owns the session |
+| `token_hash` | string | Yes | SHA-256 hash | Hash of the session token; the raw token is never stored in the database |
+| `created_at` | datetime | Yes | ISO 8601 | When the session was created |
+| `last_activity_at` | datetime | Yes | ISO 8601 | Most recent authenticated activity |
+| `expires_at` | datetime | Yes | ISO 8601 | Absolute session expiration timestamp |
+| `revoked_at` | datetime or null | No | ISO 8601 or `null` | When the session was revoked; `null` means it has not been revoked |
+
+### Example
+
+```json
+{
+  "session_id": 1,
+  "user_id": 1,
+  "created_at": "2026-10-19T18:30:00Z",
+  "last_activity_at": "2026-10-19T18:45:00Z",
+  "expires_at": "2026-10-26T18:30:00Z",
+  "revoked_at": null
+}
+```
+
+The raw session token is stored in the user's browser as an HttpOnly cookie. Only its SHA-256 hash is stored in the database.
+
+Sessions are subject to:
+- A 30-minute idle timeout.
+- A maximum absolute lifetime of 7 days.
+- Revocation during logout.
+- Validation against expiration and revocation before authenticated access.
+
+When a user account is deleted, its associated sessions are also deleted.
+
+---
+
 # 2. User Profile
 
 Stores the user information used by the matching engine.
