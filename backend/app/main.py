@@ -1,3 +1,4 @@
+
 """FastAPI application entry point.
 
 Run locally from the backend/ folder with:
@@ -12,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import get_settings
+from app.config import get_frontend_origins, get_settings
 from app.authentication import router as auth_router
 
 
@@ -28,17 +29,16 @@ app = FastAPI(title="Job Hunting AI API", lifespan=lifespan)
 # ==========================================
 # CORS CONFIGURATION
 # ==========================================
-origins = [
-    "http://localhost:3000",  
-    "https://yourdomain.com",  # Production frontend domain
-]
+# Load only frontend origins here. This does not require database settings,
+# so importing the application during test collection won't require DB config.
+origins = get_frontend_origins()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,  # Mandatory for cookie-based authentication requests
-    allow_methods=["*"],     # Allow all standard HTTP methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],     # Allows headers like X-CSRF-Token, Content-Type, etc.
+    allow_origins=list(origins),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Register authentication endpoints.
