@@ -53,21 +53,21 @@ jobs:
       - name: Set up database schema
         run: |
           docker exec -i ${{ job.services.mysql.id }} \
-            mysql -u test_user test_db \
+            mysql -uroot -prootpassword test_db \
             < db/migrations/001_create_tables.sql
 
           docker exec -i ${{ job.services.mysql.id }} \
-            mysql -u test_user test_db \
+            mysql -uroot -prootpassword test_db \
             < db/migrations/002_create_tables.sql
 
           docker exec -i ${{ job.services.mysql.id }} \
-            mysql -u test_user test_db \
+            mysql -uroot -prootpassword test_db \
             < db/migrations/002_add_jobs_first_seen_at.sql
 
       - name: Verify database tables
         run: |
           docker exec ${{ job.services.mysql.id }} \
-            mysql -u test_user test_db \
+            mysql -uroot -prootpassword test_db \
             -e "SHOW TABLES;"
 
       - name: Run backend tests
