@@ -177,6 +177,7 @@ Stores a standardized job listing retrieved from an external source such as Adzu
 | `date_posted` | date or null | No | `YYYY-MM-DD` | Original posting date |
 | `job_url` | string | Yes | Valid URL | Link to original listing |
 | `retrieved_at` | datetime | Yes | ISO 8601 | When the application retrieved the listing |
+| `first_seen_at` | datetime | Yes | ISO 8601 | Retrieval timestamp of the first stored observation of the job listing |
 
 ### Example
 
@@ -196,9 +197,11 @@ Stores a standardized job listing retrieved from an external source such as Adzu
   "description": "We are seeking a software engineer with Python and SQL experience.",
   "date_posted": "2026-10-18",
   "job_url": "https://example.com/jobs/123456",
-  "retrieved_at": "2026-10-19T18:30:00Z"
+  "retrieved_at": "2026-10-19T18:30:00Z",
+  "first_seen_at": "2026-10-19T18:30:00Z"
 }
 ```
+`first_seen_at` is initialized from `retrieved_at` when a job is first stored and remains unchanged on later imports. `retrieved_at` records the latest retrieval timestamp. If an older import arrives after a newer one, it does not overwrite the newer timestamp or job details.
 
 If an external source does not provide a field such as salary or location, that field should be stored as `null`.
 

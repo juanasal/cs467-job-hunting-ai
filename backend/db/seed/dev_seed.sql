@@ -34,19 +34,19 @@ INSERT INTO preference_workplace_types (user_id, workplace_type) VALUES
 
 INSERT INTO jobs (job_id, external_job_id, source, title, company, location, workplace_type,
                   salary_min, salary_max, salary_currency, salary_is_predicted,
-                  description, date_posted, job_url, retrieved_at) VALUES
+                  description, date_posted, job_url, retrieved_at, first_seen_at) VALUES
     (1001, 'DEV-0001', 'example', 'Junior Software Engineer', 'Example Corp', 'Portland, OR', 'hybrid',
      75000, 90000, 'USD', FALSE,
      'We are seeking a software engineer with Python and SQL experience.',
-     '2026-10-18', 'https://example.com/jobs/dev-0001', '2026-10-19 18:30:00'),
+     '2026-10-18', 'https://example.com/jobs/dev-0001', '2026-10-19 18:30:00', '2026-10-19 18:30:00'),
     (1002, 'DEV-0002', 'example', 'Frontend Developer', 'Sample Labs', NULL, 'remote',
      NULL, NULL, NULL, NULL,
      'Build accessible user interfaces with React and TypeScript.',
-     NULL, 'https://example.com/jobs/dev-0002', '2026-10-19 18:30:00'),
+     NULL, 'https://example.com/jobs/dev-0002', '2026-10-19 18:30:00', '2026-10-19 18:30:00'),
     (1003, 'DEV-0003', 'example', 'Backend Engineer', 'Placeholder Inc', 'Denver, CO', 'unknown',
      120000, 140000, 'USD', TRUE,
      'Design REST APIs in Java and deploy services on AWS using Docker.',
-     '2026-10-17', 'https://example.com/jobs/dev-0003', '2026-10-19 18:30:00');
+     '2026-10-17', 'https://example.com/jobs/dev-0003', '2026-10-19 18:30:00', '2026-10-19 18:30:00');
 
 INSERT INTO match_results (user_id, job_id, match_score, match_explanation, created_at) VALUES
     (1, 1001, 86, 'Strong skill alignment and the position matches the preferred experience level and location.', '2026-10-19 18:35:00'),
