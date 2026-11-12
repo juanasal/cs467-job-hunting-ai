@@ -165,6 +165,20 @@ To run the entire backend test suite:
 python -m pytest -v
 ```
 
+### Access control tests
+
+`tests/test_access_control.py` checks that users can reach only their own private records. It logs in two accounts and uses a test-only route that takes the user from `get_current_user` (the session cookie), not from a `user_id` in the request:
+
+- A request without a login gets `401`.
+- Account A cannot read Account B's record, even when it sends B's `user_id`.
+- Account A cannot change Account B's record, even when it sends B's `user_id`.
+
+It uses the same `TEST_DB_*` settings, creates a temporary `test_private_records` table, and drops it when done.
+
+```powershell
+python -m pytest tests/test_access_control.py -v
+```
+
 ## 7. Troubleshooting
 
 ### Error 1045: Access denied for user

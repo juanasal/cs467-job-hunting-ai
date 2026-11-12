@@ -15,9 +15,9 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to 
 | Backend tests | Python 3.13 on Ubuntu | Install `backend/requirements.txt` and run the complete pytest suite |
 | Frontend lint and build | Node.js 22 on Ubuntu | Install locked dependencies with `npm ci`, then run lint and the production build |
 
-Backend tests use fake settings and mocked Adzuna requests; no database, external API credentials, or GitHub Secrets are needed. The backend job uploads a JUnit test report as the `backend-test-results` artifact when available, including after test failures.
+Backend tests run against a MySQL 8.0 service container with the migrations applied. The pytest step sets `TEST_DB_*` to that container, so database integration tests run instead of being skipped; its `DB_*` values are placeholders that only let app startup's settings check pass. Adzuna requests are mocked, and no external API credentials or GitHub Secrets are needed. The backend job uploads a JUnit test report as the `backend-test-results` artifact when available, including after test failures.
 
-Database integration, frontend component, and browser tests are not configured yet. Repository administrators must separately configure branch protection or rulesets if passing these jobs is to be required before merging; adding the workflow does not enforce that policy by itself.
+Frontend component and browser tests are not configured yet. Repository administrators must separately configure branch protection or rulesets if passing these jobs is to be required before merging; adding the workflow does not enforce that policy by itself.
 
 ## How It Works
 
