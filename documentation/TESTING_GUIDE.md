@@ -28,7 +28,7 @@ Vitest with React Testing Library is the proposed frontend test setup. Playwrigh
 
 The [CI workflow](../.github/workflows/ci.yml) runs backend pytest tests and frontend lint/build checks on pull requests and pushes to `main`. It can also be started manually.
 
-Database integration tests are available locally but require a separately configured MySQL test database. They are skipped when the required `TEST_DB_*` settings are not provided. A passing CI run does not, by itself, confirm that these MySQL integration tests were executed.
+Database integration tests are available locally but require a separately configured MySQL test database. They are skipped when the required `TEST_DB_*` settings are not provided. In CI, the backend job sets `TEST_DB_*` to a MySQL service container, so these tests run there.
 
 See the [CI guide](CI_GUIDE.md) for environments, reports, and merge enforcement.
 

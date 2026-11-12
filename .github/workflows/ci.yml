@@ -72,11 +72,18 @@ jobs:
 
       - name: Run backend tests
         env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3306
+          TEST_DB_NAME: test_db
+          TEST_DB_USER: test_user
+          TEST_DB_PASSWORD: test_password
+          # Placeholders only so app startup's settings check passes; tests
+          # connect with TEST_DB_*. DB_NAME must differ from TEST_DB_NAME.
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
+          DB_NAME: unused_app_db
+          DB_USER: unused
+          DB_PASSWORD: unused
           APP_ENV: development
           FRONTEND_ORIGINS: http://localhost:3000,http://localhost:5173
         run: python -m pytest -q --junitxml=test-results.xml
