@@ -51,27 +51,27 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Set up database schema
+        env:
+          MYSQL_PWD: test_password
         run: |
-          sudo apt-get update
-          sudo apt-get install -y mysql-client
+          docker exec ${{ job.services.mysql.id }} \
+            mysql -u test_user test_db \
+            < db/migrations/001_create_tables.sql
 
-          MYSQL_PWD=test_password mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=test_user \
-            test_db < db/migrations/001_create_tables.sql
-          
-          MYSQL_PWD=test_password mysql \
-            --host=127.0.0.1 \
-            --port=3306 \
-            --user=test_user \
-            test_db < db/migrations/002_create_tables.sql
+          docker exec ${{ job.services.mysql.id }} \
+            mysql -u test_user test_db \
+            < db/migrations/002_create_tables.sql
+
+          docker exec ${{ job.services.mysql.id }} \
+            mysql -u test_user test_db \
+            < db/migrations/002_add_jobs_first_seen_at.sql
 
       - name: Verify database tables
         env:
           MYSQL_PWD: test_password
         run: |
-          mysql -h 127.0.0.1 -u test_user test_db \
+          docker exec ${{ job.services.mysql.id }} \
+            mysql -u test_user test_db \
             -e "SHOW TABLES;"
 
       - name: Run backend tests
