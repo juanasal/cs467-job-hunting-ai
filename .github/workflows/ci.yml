@@ -51,24 +51,20 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Set up database schema
-        env:
-          MYSQL_PWD: test_password
         run: |
-          docker exec ${{ job.services.mysql.id }} \
+          docker exec -i ${{ job.services.mysql.id }} \
             mysql -u test_user test_db \
             < db/migrations/001_create_tables.sql
 
-          docker exec ${{ job.services.mysql.id }} \
+          docker exec -i ${{ job.services.mysql.id }} \
             mysql -u test_user test_db \
             < db/migrations/002_create_tables.sql
 
-          docker exec ${{ job.services.mysql.id }} \
+          docker exec -i ${{ job.services.mysql.id }} \
             mysql -u test_user test_db \
             < db/migrations/002_add_jobs_first_seen_at.sql
 
       - name: Verify database tables
-        env:
-          MYSQL_PWD: test_password
         run: |
           docker exec ${{ job.services.mysql.id }} \
             mysql -u test_user test_db \
