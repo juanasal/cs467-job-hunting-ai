@@ -16,8 +16,10 @@ The current authentication test suite covers:
 2. Login with an incorrect password is rejected.
 3. An altered session cookie is rejected.
 4. An expired session is rejected.
+5. Registration creates exactly one account, stores a password hash instead of the password, and never returns either.
+6. Duplicate and invalid registration requests are rejected with a useful error.
 
-The implementation also enforces a 30-minute idle timeout, but the four tests above do not directly test that timeout.
+The implementation also enforces a 30-minute idle timeout, but the tests above do not directly test that timeout.
 
 ## 2. Create the test database and MySQL user
 
@@ -146,17 +148,20 @@ From the `backend` directory, run:
 python -m pytest tests/test_auth.py -v -s
 ```
 
-The test file should run these four tests:
+The test file should run these tests:
 
 - `test_auth_full_lifecycle`
 - `test_login_wrong_password`
 - `test_altered_session_cookie`
 - `test_expired_session`
+- `test_register_creates_one_account_with_hashed_password`: one `users` row is created, it stores an Argon2id hash (not the password), and the response contains neither
+- `test_register_duplicate_email_rejected`: the same email in different case or with spaces gets `409` and no second row
+- `test_register_invalid_request_rejected` (runs 4 cases): an invalid email, a short password, a missing password, or a missing email gets `422` with a message naming the problem, does not echo the password, and creates no account
 
 A successful run should end with a summary similar to:
 
 ```text
-4 passed
+10 passed
 ```
 
 To run the entire backend test suite:
