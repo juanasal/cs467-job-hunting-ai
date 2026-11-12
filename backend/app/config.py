@@ -1,3 +1,4 @@
+
 """Load backend settings from environment variables (or backend/.env)."""
 
 import os
@@ -8,7 +9,15 @@ from dotenv import load_dotenv
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
-REQUIRED_SETTINGS = ("DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD")
+REQUIRED_SETTINGS = (
+    "DB_HOST",
+    "DB_PORT",
+    "DB_NAME",
+    "DB_USER",
+    "DB_PASSWORD",
+)
+
+DEFAULT_FRONTEND_ORIGINS = ("http://localhost:3000",)
 
 
 class SettingsError(RuntimeError):
@@ -24,10 +33,39 @@ class Settings:
     db_port: int
     db_name: str
     db_user: str
-    # repr=False keeps the password out of logs if Settings is ever printed.
     db_password: str = field(repr=False)
-    # Optional path to the server's CA certificate (needed for Aiven, which requires SSL).
     db_ssl_ca: str | None = None
+    frontend_origins: tuple[str, ...] = DEFAULT_FRONTEND_ORIGINS
+
+
+def load_environment():
+    """Load backend/.env and return the process environment."""
+    load_dotenv(ENV_FILE)
+    return os.environ
+
+
+def get_frontend_origins(env=None):
+    """Return the configured frontend origins."""
+    if env is None:
+        env = load_environment()
+
+    raw_origins = env.get(
+        "FRONTEND_ORIGINS",
+        ",".join(DEFAULT_FRONTEND_ORIGINS),
+    )
+
+    origins = tuple(
+        origin.strip().rstrip("/")
+        for origin in raw_origins.split(",")
+        if origin.strip()
+    )
+
+    if not origins:
+        raise SettingsError(
+            "FRONTEND_ORIGINS must contain at least one frontend origin."
+        )
+
+    return origins
 
 
 def get_settings(env=None):
@@ -37,10 +75,14 @@ def get_settings(env=None):
     Variables already set in the environment take priority over the .env file.
     """
     if env is None:
-        load_dotenv(ENV_FILE)
-        env = os.environ
+        env = load_environment()
 
-    missing = [name for name in REQUIRED_SETTINGS if not env.get(name, "").strip()]
+    missing = [
+        name
+        for name in REQUIRED_SETTINGS
+        if not env.get(name, "").strip()
+    ]
+
     if missing:
         raise SettingsError(
             f"Missing required settings: {', '.join(missing)}. "
@@ -50,7 +92,9 @@ def get_settings(env=None):
     try:
         db_port = int(env["DB_PORT"])
     except ValueError:
-        raise SettingsError("DB_PORT must be a whole number, e.g. 3306.") from None
+        raise SettingsError(
+            "DB_PORT must be a whole number, e.g. 3306."
+        ) from None
 
     return Settings(
         db_host=env["DB_HOST"],
@@ -59,4 +103,5 @@ def get_settings(env=None):
         db_user=env["DB_USER"],
         db_password=env["DB_PASSWORD"],
         db_ssl_ca=env.get("DB_SSL_CA", "").strip() or None,
+        frontend_origins=get_frontend_origins(env),
     )
