@@ -1,3 +1,8 @@
+# GenAI attribution:
+# Developed with assistance from ChatGPT (OpenAI).
+# Prompt: Help implement JH-017 by creating authenticated API endpoints
+# to view and update user profiles, validate skills, education, and
+# experience, save profile data, and mark job matches for recalculation.
 
 """API endpoints for viewing and editing the signed-in user's profile."""
 

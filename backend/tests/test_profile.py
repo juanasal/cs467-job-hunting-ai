@@ -1,3 +1,8 @@
+# GenAI attribution:
+# Developed with assistance from ChatGPT (OpenAI).
+# Prompt: Help create integration tests for JH-017, including profile
+# creation, updates, validation, authentication, user isolation,
+# CSRF protection, and marking job matches for recalculation.
 
 """Integration tests for JH-017: Profile API."""
 
