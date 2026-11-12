@@ -64,6 +64,10 @@ jobs:
             mysql -uroot -prootpassword test_db \
             < db/migrations/002_add_jobs_first_seen_at.sql
 
+          docker exec -i ${{ job.services.mysql.id }} \
+            mysql -uroot -prootpassword test_db \
+            < db/migrations/003_add_match_results_recalculation_flag.sql
+
       - name: Verify database tables
         run: |
           docker exec ${{ job.services.mysql.id }} \
