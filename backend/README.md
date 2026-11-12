@@ -126,6 +126,37 @@ python -m pytest tests/test_job_repository.py -v
 
 These tests cover inserting new jobs, updating existing jobs, preventing duplicates, handling older imports, timestamp validation, and database failures.
 
+## Job tracking API
+
+`app/tracking.py` lets the signed-in user save, dismiss, or mark a job as applied. All routes require login, and the user always comes from the session cookie, not from the request. `PUT` and `DELETE` also need the `Origin` and `X-CSRF-Token` headers (see [`documentation/AUTHENTICATION_LAYOUT.md`](../documentation/AUTHENTICATION_LAYOUT.md)).
+
+| Route | Body | Result |
+| --- | --- | --- |
+| `GET /api/tracking?status=saved` | — | `{"tracking": [...]}`: the user's tracked jobs, newest first. `status` is optional. |
+| `PUT /api/tracking/{job_id}` | `{"status": "saved"}`, `"dismissed"`, or `"applied"` | The tracking record (`user_id`, `job_id`, `status`, `updated_at`). Use this both to set a status and to change it. |
+| `DELETE /api/tracking/{job_id}` | — | `204`. Undoes tracking so the job is untracked again. |
+
+- Each user has at most one status per job (`job_tracking`'s primary key is `user_id` + `job_id`). Repeating the same action leaves that one row unchanged, and choosing a new status replaces the old one.
+- Unknown job IDs return `404`. Invalid IDs or statuses, or an extra field like `user_id` in the body, return `422`. Undoing a job the user hasn't tracked returns `404`.
+- `applied` only records what the user says they did. The app does not submit job applications.
+
+**Dismissed jobs and the feed:** the regular recommendations feed must leave out any job the signed-in user has dismissed. Saved and applied jobs stay in the feed. The feed query should filter with:
+
+```sql
+AND NOT EXISTS (
+    SELECT 1 FROM job_tracking t
+    WHERE t.user_id = %s AND t.job_id = j.job_id AND t.status = 'dismissed'
+)
+```
+
+Users can still see their dismissed jobs with `GET /api/tracking?status=dismissed`. Undoing (`DELETE`) or choosing another status puts the job back in the feed.
+
+Run the tracking tests (they need the `TEST_DB_*` settings, see below) from the `backend/` directory:
+
+```bash
+python -m pytest tests/test_tracking.py -v
+```
+
 ## Run the server
 
 ```bash
@@ -236,3 +267,5 @@ The FastAPI starter app (JH-004: `app/main.py`, `app/config.py`, `tests/test_mai
 The database helpers (JH-006: `app/db.py`, the `DB_SSL_CA` setting in `app/config.py`, `tests/test_db.py`, and the database helpers and test database sections of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/WMYqeJ8Qys4vLCKxaAGtpN](https://claude.ai/artifact/WMYqeJ8Qys4vLCKxaAGtpN) documents the GenAI interaction that led to my code.
 
 The access control tests (JH-011: `tests/test_access_control.py`, the `TEST_DB_*` settings in `.github/workflows/ci.yml`, and the related updates to `documentation/AUTHENTICATION_TESTING.md`, `documentation/CI_GUIDE.md`, and `documentation/TESTING_GUIDE.md`) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX](https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX) documents the GenAI interaction that led to my code.
+
+The job tracking API (JH-045: `app/tracking.py`, the router registration in `app/main.py`, `tests/test_tracking.py`, and the job tracking API section of this README) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/497cRn5Rrw4avH7xfaBML9](https://claude.ai/artifact/497cRn5Rrw4avH7xfaBML9) documents the GenAI interaction that led to my code.
