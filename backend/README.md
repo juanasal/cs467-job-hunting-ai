@@ -163,7 +163,7 @@ If `docker` is not found, finish installation and reopen your terminal. If it ca
 
 Complete the Python setup above and activate your virtual environment first. The commands below use Bash or Zsh (macOS/Linux; on Windows use a WSL Bash terminal with Docker Desktop integration enabled). Run them from `backend/`.
 
-Start a throwaway MySQL instance in Docker, apply both migrations, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
+Start a throwaway MySQL instance in Docker, apply all three migrations in numerical order, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
@@ -172,12 +172,11 @@ docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
 
 # Wait about 20 seconds for MySQL to start, then:
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
-docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_create_user_sessions.sql
 
 TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
-  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m \
-  python -m pytest -q
+  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m pytest -q
 ```
 
 This runs the full backend test suite, including database integration tests when the separate MySQL test database is configured. Without the `TEST_DB_*` settings, database integration tests are skipped. Check the pytest output to confirm that the integration tests ran rather than being skipped.
