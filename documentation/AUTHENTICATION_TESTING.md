@@ -4,20 +4,22 @@ This guide explains how to run the Job Hunting AI authentication tests using a s
 
 ## 1. What the tests cover
 
-The current authentication test suite covers:
+The authentication integration suite verifies:
 
-1. Full authentication lifecycle:
-   - Register a test account (or continue if it already exists).
-   - Log in.
-   - Confirm `/api/auth/me` returns the authenticated user.
-   - Retrieve a CSRF token.
-   - Log out.
-   - Confirm the session is no longer accepted.
-2. Login with an incorrect password is rejected.
-3. An altered session cookie is rejected.
-4. An expired session is rejected.
+- Registration and the full login, protected-route, CSRF, and logout lifecycle.
+- Replay of the original session token after logout is rejected.
+- Incorrect-password and unknown-email rejection without creating a session.
+- Successful session-row creation and session-cookie attributes.
+- Altered session token rejection.
+- Absolute expiration, including the expiration boundary.
+- Idle-timeout rejection at the 30-minute boundary.
+- Activity refresh without extending the seven-day absolute lifetime.
+- CSRF and Origin rejection: missing token, mismatched token, missing CSRF cookie, missing Origin, and untrusted Origin.
+- Rejected logout requests leave the authenticated session usable.
+- Logging out one session leaves another session for the same user usable.
+- Production cookie attributes, including the `__Host-session` name.
 
-The implementation also enforces a 30-minute idle timeout, but the four tests above do not directly test that timeout.
+The tests use the actual FastAPI routes and a separate MySQL database. They must not run against a database containing data you need to preserve.
 
 ## 2. Create the test database and MySQL user
 
@@ -83,7 +85,8 @@ USE job_hunting_ai_test;
 Execute the migration files in order:
 
 1. `backend/db/migrations/001_create_tables.sql`
-2. `backend/db/migrations/002_create_tables.sql`
+2. `backend/db/migrations/002_add_jobs_first_seen_at.sql`
+3. `backend/db/migrations/003_create_user_sessions.sql`
 
 Make sure `job_hunting_ai_test` is the active schema before executing each migration.
 
@@ -146,18 +149,7 @@ From the `backend` directory, run:
 python -m pytest tests/test_auth.py -v -s
 ```
 
-The test file should run these four tests:
-
-- `test_auth_full_lifecycle`
-- `test_login_wrong_password`
-- `test_altered_session_cookie`
-- `test_expired_session`
-
-A successful run should end with a summary similar to:
-
-```text
-4 passed
-```
+The suite includes parameterized CSRF/Origin cases. Run the command and use pytest's actual summary as the source of truth; a successful run should show all cases passing and none skipped due to missing `TEST_DB_*` settings.
 
 To run the entire backend test suite:
 
@@ -219,7 +211,7 @@ USE job_hunting_ai_test;
 SHOW TABLES;
 ```
 
-Then execute both migrations in order.
+Then execute the three migrations in numerical order.
 
 ### Tests connect to the wrong database
 
@@ -257,6 +249,10 @@ After the automated tests pass, these behaviors can also be checked through the 
 - [ ] Request `/api/auth/me` again and confirm the request is unauthorized.
 - [ ] Confirm an invalid or altered session cookie is rejected.
 - [ ] Confirm an expired session is rejected.
+- [ ] Confirm an idle session is rejected after 30 minutes.
+- [ ] Confirm logout rejects replay of the original session token.
+- [ ] Confirm an invalid CSRF or Origin request does not revoke the session.
+- [ ] Confirm logging out one browser session leaves another browser session active.
 
 ## 9. Security reminders
 
@@ -266,6 +262,8 @@ After the automated tests pass, these behaviors can also be checked through the 
 - Keep passwords in local environment variables or an untracked `.env` file.
 - Never commit `.env` files, database passwords, session tokens, or other secrets.
 - The application generates a random session token for the browser cookie and stores only its SHA-256 hash in `user_sessions`.
-- Logout revokes the server-side session and clears the session and CSRF cookies.
+- Logout revokes the server-side session and clears the session and CSRF cookies only after the database confirms the revocation.
 - In production, the session cookie uses the `__Host-session` name and secure cookie settings. Local development uses the `session` cookie name.
-- The current automated tests check session expiration but do not directly simulate the 30-minute idle timeout.
+- Session validation locks the session row while checking and refreshing activity. Requests that passed validation before logout commits may finish; validations started after the commit must reject the revoked token.
+- A logout database failure returns HTTP 500 and does not report success or clear cookies as though revocation succeeded.
+- The production-cookie test verifies cookie attributes; it does not prove direct cross-site Vercel-to-Render cookie behavior. Use a same-site proxy or deliberately configure `SameSite=None; Secure` before deploying that topology.
