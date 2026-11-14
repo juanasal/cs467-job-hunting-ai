@@ -11,7 +11,14 @@ chance of being hired.
 
 **Status:** design proposal for team review. The repository already defines the input
 fields and a 0–100 score scale. The filtering policies, weights, thresholds, and
-related-skill rules below are proposals. No algorithm is implemented here.
+related-skill rules below are proposals. This document originally added no algorithm.
+
+**JH-034 implementation update (2026-11-13):** The requester approved adopting the
+qualification-scoring rules, including unspecified priorities, normalization, duplicate
+handling, final rounding, and qualification-fit threshold, as `exact-v1`. See the
+[implemented baseline](../JOB_MATCHING.md) for its interface and tests. Preference
+filtering, related-skill credit, and public diagnostics remain separate proposals;
+this update does not approve or implement those policies.
 
 ## Section index
 
@@ -447,7 +454,9 @@ The same examples also provide a few useful boundary checks:
 ## How the team can use these examples
 
 The workflow starts with input validation, then separates four responsibilities. These
-are conceptual interfaces, not implemented modules or API changes:
+are conceptual interfaces. JH-034 now implements qualification scoring and explicit
+requirement preparation as described in the [baseline guide](../JOB_MATCHING.md); the
+other responsibilities remain future work. These interfaces do not change the API:
 
 | Component | Inputs | Outputs |
 | --- | --- | --- |

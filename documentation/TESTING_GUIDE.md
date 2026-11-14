@@ -22,7 +22,7 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 | Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
 | Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
-| Recommendations | Data contract defines match results | Add scoring and quality tests alongside the matching engine |
+| Recommendations | Pure `exact-v1` qualification scorer and fixed pytest cases | Extend `backend/tests/test_job_matching.py`; extraction, related skills, and preference filtering remain separate work |
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
@@ -154,7 +154,7 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 ## 7. Recommendation Testing
 
-When the matching engine is implemented, maintain a small versioned set of synthetic profiles and job listings with expected outcomes.
+The [JH-034 baseline](JOB_MATCHING.md) implements `exact-v1` qualification scoring with synthetic profiles, jobs, and hand-authored requirements in `backend/tests/test_job_matching.py`. Keep these independently calculated expectations versioned as matching evolves. Requirement extraction and related-skill scoring remain JH-035 and JH-036 work.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.
@@ -183,6 +183,7 @@ While developing, run a specific file or test:
 python -m pytest tests/test_adzuna_client.py
 python -m pytest tests/test_main.py::test_health_returns_ok
 python -m pytest tests/test_job_normalizer.py
+python -m pytest tests/test_job_matching.py -q
 python -m pytest tests/test_job_repository.py -v
 ```
 

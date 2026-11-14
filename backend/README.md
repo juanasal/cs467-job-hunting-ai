@@ -71,6 +71,12 @@ Run the normalizer tests from the `backend/` directory:
 python -m pytest tests/test_job_normalizer.py
 ```
 
+## Qualification scoring (JH-034)
+
+`app/job_matching.py` provides the pure `exact-v1` baseline with explicit prepared
+requirements. See [usage, rules, and limitations](../documentation/JOB_MATCHING.md).
+Run `python -m pytest tests/test_job_matching.py -q` from `backend/`.
+
 ## Database setup
 
 The SQL scripts that create the tables and example data are in [`db/`](db/README.md). That README explains how to apply them and how to add new migration scripts.
