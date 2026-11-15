@@ -154,7 +154,7 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 ## 7. Recommendation Testing
 
-The [JH-034 baseline](JOB_MATCHING.md) implements `exact-v1` qualification scoring with synthetic profiles, jobs, and hand-authored requirements in `backend/tests/test_job_matching.py`. Keep these independently calculated expectations versioned as matching evolves. Requirement extraction and related-skill scoring remain JH-035 and JH-036 work.
+The [exact-match baseline](JOB_MATCHING.md) implements `exact-v1` qualification scoring with synthetic profiles, jobs, and hand-authored requirements in `backend/tests/test_job_matching.py`. Keep these independently calculated expectations versioned as matching evolves. Requirement extraction and related-skill scoring remain future work; see the baseline guide for scope and follow-up tickets.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.

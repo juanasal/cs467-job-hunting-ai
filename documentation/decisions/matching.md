@@ -9,16 +9,13 @@ The examples describe our judgments about fit. A qualification score of 80 means
 alignment with visible qualifications under these rules; it does **not** mean an 80%
 chance of being hired.
 
-**Status:** design proposal for team review. The repository already defines the input
-fields and a 0–100 score scale. The filtering policies, weights, thresholds, and
-related-skill rules below are proposals. This document originally added no algorithm.
-
-**JH-034 implementation update (2026-11-13):** The requester approved adopting the
-qualification-scoring rules, including unspecified priorities, normalization, duplicate
-handling, final rounding, and qualification-fit threshold, as `exact-v1`. See the
-[implemented baseline](../JOB_MATCHING.md) for its interface and tests. Preference
-filtering, related-skill credit, and public diagnostics remain separate proposals;
-this update does not approve or implement those policies.
+**Status:** qualification-scoring rules adopted for the `exact-v1` baseline;
+preference filtering and related-skill policies remain proposals. The baseline adopts
+the weights, unspecified priorities, normalization, duplicate handling, final rounding,
+and qualification-fit threshold described below. See the
+[implemented baseline](../JOB_MATCHING.md) for its interface, tests, and limitations.
+The repository's shared input fields and 0–100 score scale are unchanged. Public
+diagnostics remain internal evaluation concepts rather than additions to the API.
 
 ## Section index
 
@@ -454,7 +451,7 @@ The same examples also provide a few useful boundary checks:
 ## How the team can use these examples
 
 The workflow starts with input validation, then separates four responsibilities. These
-are conceptual interfaces. JH-034 now implements qualification scoring and explicit
+are conceptual interfaces. The exact-match baseline implements qualification scoring and explicit
 requirement preparation as described in the [baseline guide](../JOB_MATCHING.md); the
 other responsibilities remain future work. These interfaces do not change the API:
 

@@ -1,4 +1,4 @@
-"""Fixed, hand-calculated expectations for exact-v1 (JH-033 examples)."""
+"""Fixed, hand-calculated expectations for exact-v1."""
 from copy import deepcopy
 
 import pytest

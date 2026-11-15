@@ -71,7 +71,7 @@ Run the normalizer tests from the `backend/` directory:
 python -m pytest tests/test_job_normalizer.py
 ```
 
-## Qualification scoring (JH-034)
+## Qualification scoring
 
 `app/job_matching.py` provides the pure `exact-v1` baseline with explicit prepared
 requirements. See [usage, rules, and limitations](../documentation/JOB_MATCHING.md).

@@ -1,4 +1,4 @@
-# JH-034 exact-match baseline
+# Exact-match scoring baseline
 
 `app.job_matching.score_job(profile, job, *, requirements)` is a pure backend
 qualification calculation. It accepts shared profile/job dictionaries and explicit
@@ -7,15 +7,14 @@ clock, or AI dependencies.
 
 ## Decision and boundaries
 
-The [JH-033 design](decisions/matching.md) is a proposal, not an already approved
-algorithm. During JH-034 implementation the requester explicitly approved adopting its
-qualification rules, including unspecified priority, as the versioned `exact-v1`
-baseline, with preference filtering left to a separate layer. This approval does not
-adopt the proposal's filtering policy, related-skill table, or public diagnostics schema.
+The `exact-v1` baseline adopts the qualification rules in the
+[matching design](decisions/matching.md), including unspecified priorities, with
+preference filtering assigned to a separate layer. Filtering policy, related-skill
+credit, and the public diagnostics schema remain proposals.
 The [shared contract](DATA_CONTRACT.md) is unchanged.
 
-Repository inspection found dictionary-based job normalization/repository helpers, no
-shared profile/job Python model, and no matching or preference-filter implementation.
+The module uses dictionaries consistently with the job normalizer and repository;
+there is no shared profile/job Python model.
 This module follows that dictionary convention. It checks IDs, nonempty profile skills,
 profile enums, and a nonempty job description; callers must validate the remaining
 shared-record fields upstream. Invalid scoring inputs raise `ValueError`, producing no
@@ -29,7 +28,7 @@ must evaluate preferences separately and keep exclusions distinct from scores an
 unknown compatibility. Until then results must not be presented as eligible or fully
 compatible recommendations.
 
-## Preparing requirements before JH-035
+## Preparing structured requirements
 
 Call `prepare_requirements(job, structured, warnings=())` with hand-authored requirements
 from the available description. Each target needs `priority` (`required`, `preferred`,
@@ -94,22 +93,11 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
   zero. Weights never redistribute. No degree-field inference or years conversion.
 - Use exact rational arithmetic internally; round only the final total with
   `floor(raw + 0.5)`. Diagnostic numbers are floats, with no effect on calculation.
-  Scores >=60 receive the JH-033 `good` qualification-fit label, otherwise `weak`.
+  Scores >=60 receive the `good` qualification-fit label, otherwise `weak`.
 - Component coverage is the fraction of base weights with evaluable inputs, including
   known shortfalls; it is informational and never changes the score.
 
 ## Validation and limitations
-
-Validation recorded on 2026-11-13:
-
-- Scoring tests: 33 passed.
-- Full backend suite: 117 passed, 13 skipped; the skipped database-dependent tests
-  were not validated against MySQL in this run.
-- Frontend lint and production build: passed after the requester reinstalled local
-  dependencies. The earlier build failure was a missing local `lucide-react` install.
-- Changed-file whitespace and new documentation local-link checks: passed.
-
-These are results from the implementation session, not guarantees for later changes.
 
 From `backend/` with dependencies installed:
 
@@ -119,8 +107,8 @@ python -m pytest -q
 ```
 
 Tests use synthetic shared records and hand-authored requirements with independently
-calculated scores, including JH-033 strong/unrelated, partial-description, and weighting
-examples. They test baseline expectations rather than future related-skill expectations.
+calculated scores, including the matching design’s strong/unrelated, partial-description,
+and weighting examples. They test baseline expectations rather than future related-skill expectations.
 
 This measures alignment with visible qualifications, not hiring probability or verified
 proficiency. Exact matching misses related skills and spelling variants. Incomplete
