@@ -224,6 +224,47 @@ def test_invalid_update_preserves_profile(profile_client):
     assert response.json()["skills"] == ["Python", "SQL"]
 
 
+def test_database_duplicate_preserves_profile(profile_client, test_connection):
+    """A database-level duplicate returns 422 and preserves saved data."""
+    _, headers = register_and_login(profile_client)
+
+    response = update_profile(profile_client, headers)
+    assert response.status_code == 200, response.text
+    original = profile_client.get(PROFILE_URL).json()
+
+    # Check whether the test database considers these two skills equal.
+    with test_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COLLATION_NAME AS collation_name
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'user_skills'
+                  AND COLUMN_NAME = 'skill'
+                """
+            )
+            row = cursor.fetchone()
+
+    assert row is not None
+    collation = row["collation_name"].lower()
+    if "_ai_" not in collation and "general_ci" not in collation:
+        pytest.skip(f"Test database collation {collation} may distinguish accents")
+
+    response = update_profile(
+        profile_client,
+        headers,
+        sample_profile(skills=["resume", "résumé"]),
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["message"] == "Duplicate skills are not allowed."
+
+    response = profile_client.get(PROFILE_URL)
+    assert response.status_code == 200, response.text
+    assert response.json() == original
+
+
 def test_put_requires_csrf(profile_client):
     """Profile updates require a valid CSRF token."""
     register_and_login(profile_client)
@@ -392,6 +433,153 @@ def test_profile_change_marks_matches_for_recalculation(
 
     finally:
         # Remove temporary data even if the test fails.
+        if job_id is not None:
+            with test_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        DELETE FROM match_result_skills
+                        WHERE user_id = %s AND job_id = %s
+                        """,
+                        (user_id, job_id),
+                    )
+
+                    cursor.execute(
+                        """
+                        DELETE FROM match_results
+                        WHERE user_id = %s AND job_id = %s
+                        """,
+                        (user_id, job_id),
+                    )
+
+                    cursor.execute(
+                        """
+                        DELETE FROM jobs
+                        WHERE job_id = %s
+                        """,
+                        (job_id,),
+                    )
+
+                connection.commit()
+
+@pytest.mark.parametrize(
+    "updated_profile, expected_recalculation",
+    [
+        pytest.param(
+            sample_profile(education_level="master"),
+            1,
+            id="education_changed",
+        ),
+        pytest.param(
+            sample_profile(experience_level="mid"),
+            1,
+            id="experience_changed",
+        ),
+        pytest.param(
+            sample_profile(),
+            0,
+            id="profile_unchanged",
+        ),
+        pytest.param(
+            sample_profile(skills=["SQL", "Python"]),
+            0,
+            id="skills_reordered",
+        ),
+    ],
+)
+def test_profile_recalculation_scenarios(
+    profile_client,
+    test_connection,
+    updated_profile,
+    expected_recalculation,
+):
+    """Check when profile updates should mark matches for recalculation."""
+    user_id, headers = register_and_login(profile_client)
+
+    # Create the original profile.
+    response = update_profile(profile_client, headers)
+    assert response.status_code == 200, response.text
+
+    external_job_id = f"jh017-recalc-{uuid4().hex}"
+    job_id = None
+
+    try:
+        # Create a temporary job and an existing match result.
+        with test_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO jobs (
+                        external_job_id,
+                        source,
+                        title,
+                        company,
+                        description,
+                        job_url,
+                        retrieved_at,
+                        first_seen_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+                    """,
+                    (
+                        external_job_id,
+                        "test",
+                        "Software Engineer",
+                        "Test Company",
+                        "Temporary job for recalculation testing.",
+                        "https://example.com/test-recalculation",
+                    ),
+                )
+                job_id = cursor.lastrowid
+
+                cursor.execute(
+                    """
+                    INSERT INTO match_results (
+                        user_id,
+                        job_id,
+                        match_score,
+                        match_explanation,
+                        needs_recalculation
+                    )
+                    VALUES (%s, %s, %s, %s, FALSE)
+                    """,
+                    (
+                        user_id,
+                        job_id,
+                        80,
+                        "Test match",
+                    ),
+                )
+
+            connection.commit()
+
+        # Update the profile with the test scenario.
+        response = update_profile(
+            profile_client,
+            headers,
+            updated_profile,
+        )
+
+        assert response.status_code == 200, response.text
+
+        # Check whether the recalculation flag changed correctly.
+        with test_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT needs_recalculation
+                    FROM match_results
+                    WHERE user_id = %s AND job_id = %s
+                    """,
+                    (user_id, job_id),
+                )
+                result = cursor.fetchone()
+
+        assert result is not None
+        assert result["needs_recalculation"] == expected_recalculation
+
+    finally:
+        # Remove temporary test data.
         if job_id is not None:
             with test_connection() as connection:
                 with connection.cursor() as cursor:

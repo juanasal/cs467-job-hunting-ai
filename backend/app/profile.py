@@ -10,6 +10,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+from pymysql.err import IntegrityError
 
 from app.authentication import get_current_user, verify_csrf_and_origin
 from app.db import DbConnection, execute, fetch_all, fetch_one
@@ -181,14 +182,22 @@ def update_profile(
     )
 
     for skill in normalized_skills:
-        execute(
-            conn,
-            """
-            INSERT INTO user_skills (user_id, skill)
-            VALUES (%s, %s)
-            """,
-            (user_id, skill),
-        )
+        try:
+            execute(
+                conn,
+                """
+                INSERT INTO user_skills (user_id, skill)
+                VALUES (%s, %s)
+                """,
+                (user_id, skill),
+            )
+        except IntegrityError as exc:
+            if exc.args[0] == 1062:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Duplicate skills are not allowed.",
+                ) from exc
+            raise
 
     # Mark recommendations for recalculation only when
     # matching profile inputs have changed.
