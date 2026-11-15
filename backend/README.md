@@ -137,59 +137,185 @@ uvicorn app.main:app --reload
 
 ## Run the tests
 
+Run all commands below from `backend/` using Bash or Zsh. On Windows, use a WSL Bash terminal with Docker Desktop integration enabled. Database tests create and change records, so use a separate local test database, never the shared or production database.
+
+### First-time setup
+
+**1. Prepare Python.** Install Python 3.11+ (CI uses 3.13), then create and activate a virtual environment and install the backend dependencies:
+
 ```bash
-python -m pytest
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-The tests do not require a database by default. Database integration tests and `tests/test_job_repository.py` are skipped unless the `TEST_DB_*` settings are configured.
+If `.venv` already exists, activate it and install the requirements without recreating it. Dependency installation requires network access.
 
-### Install and start Docker (first time only)
-
-Docker runs a separate local MySQL server for the integration tests. You do not need to install MySQL on your computer.
-
-1. Install Docker Desktop using the instructions for [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Windows](https://docs.docker.com/desktop/setup/install/windows-install/), or [Linux](https://docs.docker.com/desktop/setup/install/linux/). On Mac, choose the download for your chip (Apple silicon or Intel). On Windows, follow the WSL 2 prerequisites and use Linux containers. Linux users can also use [Docker Engine](https://docs.docker.com/engine/install/).
-2. Open Docker Desktop, finish its initial setup, and wait for the engine to start. Keep it running while using the test database.
-3. In a new terminal, verify the installation and engine:
+**2. Start Docker.** Install Docker Desktop for [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Windows](https://docs.docker.com/desktop/setup/install/windows-install/), or [Linux](https://docs.docker.com/desktop/setup/install/linux/) if needed. Open it and wait for the engine to start. Linux users can also use Docker Engine. Verify that the engine is available:
 
 ```bash
-docker --version
 docker info
-docker run --rm hello-world
 ```
 
-If `docker` is not found, finish installation and reopen your terminal. If it cannot connect to the Docker daemon, start Docker Desktop (or the Docker Engine service on Linux) and retry. The `hello-world` command downloads a small image and prints a success message.
-
-### Run the database integration tests
-
-Complete the Python setup above and activate your virtual environment first. The commands below use Bash or Zsh (macOS/Linux; on Windows use a WSL Bash terminal with Docker Desktop integration enabled). Run them from `backend/`.
-
-Start a throwaway MySQL instance in Docker, apply both migrations, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
+**3. Create an isolated MySQL database.** This downloads the MySQL image if needed and publishes MySQL on local port `3307`. The credentials below are for this local test database only. If the named container already exists, follow [Subsequent runs](#subsequent-runs) instead.
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
   -e MYSQL_ROOT_PASSWORD=local_root_pw -e MYSQL_DATABASE=job_hunting_ai_test \
   -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
 
-# Wait about 20 seconds for MySQL to start, then:
+```
+
+Check readiness with this command; repeat it until the output includes `mysqld is alive`:
+
+```bash
+docker exec jh-test-mysql mysqladmin ping -h 127.0.0.1 -uroot -plocal_root_pw
+```
+
+Confirm the host port before configuring the tests:
+
+```bash
+docker port jh-test-mysql
+```
+
+Expect `3306/tcp -> 127.0.0.1:3307`. If the mapping differs or is missing, see [Troubleshooting](#troubleshooting).
+
+**4. Apply migrations once to the new, empty database.** Run them in order, stopping if any command fails:
+
+```bash
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
-
-TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
-  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m \
-  python -m pytest -q
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_add_match_results_recalculation_flag.sql
 ```
 
-This runs the full backend test suite, including database integration tests when the separate MySQL test database is configured. Without the `TEST_DB_*` settings, database integration tests are skipped. Check the pytest output to confirm that the integration tests ran rather than being skipped.
+Migration `003_add_match_results_recalculation_flag.sql` is introduced by JH-017; these instructions assume that change has been merged. After pulling changes, also apply any later migrations present in `db/migrations/`, in numerical order. Do not reapply migrations already run against this database. No seed data is required for the tests.
 
-Stop it with `docker stop jh-test-mysql` and start it again later with `docker start jh-test-mysql`. On subsequent runs, start Docker Desktop and the existing container, check readiness, and rerun the test command; do not recreate the container or reapply the initial migration. If the container name is already in use, use `docker start` instead of `docker run`. If port `3307` is occupied, choose another host port in `-p` and use that same port for `TEST_DB_PORT`. Never point `TEST_DB_*` at the shared or production database.
+**5. Configure the test session.** Export these settings in the terminal where you will run pytest:
+
+```bash
+export TEST_DB_HOST=127.0.0.1
+export TEST_DB_PORT=3307
+export TEST_DB_NAME=job_hunting_ai_test
+export TEST_DB_USER=jh_test
+export TEST_DB_PASSWORD=local_test_pw
+export TEST_DB_SSL_CA=
+
+# App startup requires valid settings even though integration tests use TEST_DB_*.
+# These placeholders keep the application database separate from the test database.
+export DB_HOST=127.0.0.1
+export DB_PORT=3307
+export DB_NAME=unused_app_db
+export DB_USER=unused
+export DB_PASSWORD=unused
+export DB_SSL_CA=
+export APP_ENV=development
+export FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
+```
+
+These exports affect only this shell and its child processes; they override values in `.env` without editing the file. Use a separate terminal for running the application with its normal settings. If you chose another host port, update `TEST_DB_PORT` to match it.
+
+**6. Run the tests.** Run the full suite, including database integration tests:
+
+```bash
+python -m pytest -q -rs
+```
+
+Or select individual test files using the same environment:
+
+```bash
+# Authentication integration tests
+python -m pytest tests/test_auth.py -q -rs
+
+# Account isolation integration tests
+python -m pytest tests/test_access_control.py -q -rs
+
+# Database helpers and job persistence
+python -m pytest tests/test_db.py tests/test_job_repository.py -q -rs
+
+# Adzuna client and normalization tests (no database needed)
+python -m pytest tests/test_adzuna_client.py tests/test_job_normalizer.py -q
+```
+
+To select another test file, replace the path after `pytest` with its path under `tests/`. The `-rs` option explains skipped tests. A passing run with database tests skipped does not verify database behavior.
+
+### Subsequent runs
+
+Open Docker Desktop and, from `backend/`, activate the existing Python environment and start the existing container:
+
+```bash
+source .venv/bin/activate
+docker start jh-test-mysql
+docker exec jh-test-mysql mysqladmin ping -h 127.0.0.1 -uroot -plocal_root_pw
+```
+
+Repeat the readiness command until MySQL reports `mysqld is alive`. If dependencies have changed, run `python -m pip install -r requirements.txt`. Apply only new migrations added since your last run, using the same `docker exec -i ... < db/migrations/...` pattern from first-time setup.
+
+In a new terminal session, repeat the exports from step 5, then run the suite or one of the individual-file commands above:
+
+```bash
+python -m pytest -q -rs
+```
+
+Do not recreate the container or rerun the initial migrations for each test run. When finished, you can stop MySQL without deleting its data:
+
+```bash
+docker stop jh-test-mysql
+```
+
+### Troubleshooting
+
+**Container name already in use:** Inspect existing containers, including stopped ones:
+
+```bash
+docker ps -a --filter name=jh-test-mysql
+```
+
+If this is your existing test container, use `docker start jh-test-mysql`, then check readiness and its port mapping. Starting a container preserves its original credentials and port configuration.
+
+**Port already allocated:** Identify running containers using the port:
+
+```bash
+docker ps --filter publish=3307 --format 'table {{.Names}}\t{{.Ports}}'
+```
+
+If it is a container you can stop, stop it by name before starting the test container. Otherwise create a separate test container with a different name and host port:
+
+```bash
+docker run -d --name jh-test-mysql-3308 -p 127.0.0.1:3308:3306 -e MYSQL_ROOT_PASSWORD=local_root_pw -e MYSQL_DATABASE=job_hunting_ai_test -e MYSQL_USER=jh_test -e MYSQL_PASSWORD=local_test_pw mysql:8.4
+```
+
+Use `jh-test-mysql-3308` in every readiness, migration, start, stop, and port command for that container. Apply all migrations to its new database and set `export TEST_DB_PORT=3308` before testing. This preserves the original container and its data.
+
+**No output from `docker port jh-test-mysql`:** The container has no published host port. MySQL can respond to `docker exec` while remaining inaccessible to Python on your host. Starting it again does not add a port mapping. Create a separate container using the `3308` command above, then follow the new-database setup for it.
+
+**Table or column already exists:** A migration may already have been applied. Do not rerun all migrations. Inspect the schema to determine which changes are already present:
+
+```bash
+docker exec jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test -e "SHOW TABLES; SHOW COLUMNS FROM jobs;"
+```
+
+For the migrations currently listed above, `user_sessions` is added by `002_create_tables.sql` and `jobs.first_seen_at` by `002_add_jobs_first_seen_at.sql`. Compare the schema with each migration and apply only missing changes. If uncertain, create a separate fresh test container rather than deleting existing data.
+
+**`No module named fastapi` (or another dependency):** Activate the virtual environment and install the requirements with its Python:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+**`No module named python`:** The command contains a duplicated `python -m`. Use `python -m pytest -q -rs` exactly once.
+
+**Database tests skipped:** Run `python -m pytest -q -rs` to see the reason. Export all `TEST_DB_*` settings from step 5 in the same terminal before testing. Without test database configuration, integration tests intentionally skip. Keep `DB_NAME` different from `TEST_DB_NAME`; the tests reject settings that point at the application database.
+
+**Connection refused or startup settings errors:** Check that Docker is running, MySQL is ready, and `docker port` matches `TEST_DB_PORT`. Repeat the step 5 exports if application startup reports missing `DB_*` settings. The MySQL password-on-command-line warning is expected for these local commands and does not itself indicate failure.
 
 ## Browse the local database with DBeaver
 
 [DBeaver Community](https://dbeaver.io/download/) is a free desktop app for browsing tables and running SQL. Install it separately from VS Code; the MySQL server stays in Docker.
 
 1. Download the installer for your operating system. On Mac, choose Apple silicon or Intel to match your chip, open the downloaded disk image, and drag DBeaver into Applications. On Windows or Linux, follow the [installation instructions](https://dbeaver.com/docs/dbeaver/Installation/) for your download.
-2. Complete the Docker database setup and initial migration in [Run the database integration tests](#run-the-database-integration-tests) above. Keep Docker Desktop and `jh-test-mysql` running. If the container already exists but is stopped, run `docker start jh-test-mysql`.
+2. Complete [First-time setup](#first-time-setup) above, including the database migrations. Keep Docker Desktop and your test container running. For an existing container, follow [Subsequent runs](#subsequent-runs).
 3. Open DBeaver and select **Database → New Database Connection**, choose **MySQL**, and click **Next**. Enter:
 
 | Setting | Value |
