@@ -1,5 +1,21 @@
 # Exact-match scoring baseline
 
+This baseline compares a person's skills, education, and experience with the
+qualifications listed in a job. It returns a score from 0 to 100 and explains which
+qualifications matched, which did not, and where information was missing. Skills can
+contribute up to 80 points; education and experience can each contribute up to 10.
+The same inputs always produce the same result.
+
+For now, a caller must supply the job's qualifications in a structured list alongside
+the job record. The scorer does not read a description and work out the requirements
+itself. It matches skill names exactly after standardizing capitalization and spacing,
+so related names such as `React` and `React.js` do not count as a match.
+
+The score describes how well the profile matches the available qualification evidence.
+It is not a chance of being hired, and it does not check preferences such as salary,
+location, or remote work. Missing information earns no points, but does not prove that
+the person lacks a qualification.
+
 `app.job_matching.score_job(profile, job, *, requirements)` is a pure backend
 qualification calculation. It accepts shared profile/job dictionaries and explicit
 `PreparedRequirements`, returning a dictionary. There are no network, database, HTTP,
@@ -48,15 +64,44 @@ Ambiguous minima/years without an agreed level mapping must be withheld as `None
 with a warning; `other` education minima remain unevaluable. Supporting spans from
 duplicate skills are all retained, deduplicated and sorted.
 
-Example (from `backend/`, using otherwise validated shared records):
+## Complete example
+
+This fictional example includes both shared records and the hand-authored requirements.
+The job snippet names only Python. Although the person also knows SQL and has known
+education and experience levels, those cannot earn points without corresponding job
+requirements. The expected score is therefore 80: all 80 skill points and zero points
+for education and experience.
+
+The example can be run from `backend/` with the project dependencies installed:
 
 ```python
 from app.job_matching import prepare_requirements, score_job
 
-profile = {"user_id": 1, "skills": ["Python", "SQL"],
-           "education_level": "bachelor", "experience_level": "mid"}
-# job is a shared job record, including job_id=1001 and this description:
-# "Required: Python. Additional qualifications…"
+profile = {
+    "user_id": 1,
+    "skills": ["Python", "SQL"],
+    "education_level": "bachelor",
+    "experience_level": "mid",
+}
+job = {
+    "job_id": 1001,
+    "external_job_id": "fictional-001",
+    "source": "fictional",
+    "title": "Software Engineer",
+    "company": "Example Company",
+    "location": None,
+    "workplace_type": "unknown",
+    "salary_min": None,
+    "salary_max": None,
+    "salary_currency": None,
+    "salary_is_predicted": None,
+    "description": "Required: Python. Additional qualifications…",
+    "date_posted": "2026-11-01",
+    "job_url": "https://example.com/jobs/001",
+    "retrieved_at": "2026-11-10T18:00:00Z",
+    "first_seen_at": "2026-11-10T18:00:00Z",
+}
+
 requirements = prepare_requirements(job, {
     "skills": [{"name": "Python", "priority": "required",
                 "evidence": "Required: Python."}],
@@ -64,10 +109,24 @@ requirements = prepare_requirements(job, {
     "experience": None,
 }, warnings=["description_partial"])
 result = score_job(profile, job, requirements=requirements)
-# result["match_score"] == 80
-# result["matched_skills"] == ["Python"]
-# result["component_points"] == {"skills": 80.0, "education": 0.0, "experience": 0.0}
+print(result["match_score"])
+print(result["matched_skills"])
+print(result["component_points"])
+print(result["warnings"])
 ```
+
+Expected output for those four fields:
+
+```text
+80
+['Python']
+{'skills': 80.0, 'education': 0.0, 'experience': 0.0}
+['description_partial']
+```
+
+The full result also explains the exact Python match and the missing education and
+experience requirements. The partial-description warning is supplied by the caller;
+the scorer does not detect incomplete descriptions automatically.
 
 The result includes contract fields `user_id`, `job_id`, `match_score`,
 `matched_skills`, and `match_explanation`. The caller supplies `created_at` outside the
