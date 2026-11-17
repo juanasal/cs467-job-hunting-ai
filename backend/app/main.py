@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_frontend_origins, get_settings
 from app.authentication import router as auth_router
-
+from app.search_preferences import router as preferences_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -43,6 +43,7 @@ app.add_middleware(
 
 # Register authentication endpoints.
 app.include_router(auth_router)
+app.include_router(preferences_router)
 
 
 def error_response(status_code, message, details=None, headers=None):
