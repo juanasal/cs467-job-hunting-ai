@@ -114,6 +114,50 @@ def test_repeating_an_action_does_not_duplicate(test_settings, job_id, make_user
     assert client.delete(url, headers=headers).status_code == 404
 
 
+def test_updated_at_only_changes_with_status(test_settings, job_id, make_user):
+    client, headers, user_id = make_user()
+    url = f"/api/tracking/{job_id}"
+    old_time = "2020-01-01T00:00:00Z"
+
+    assert client.put(url, json={"status": "saved"}, headers=headers).status_code == 200
+
+    # Backdate the row so a change is visible without waiting.
+    with transaction(test_settings) as conn:
+        conn.cursor().execute(
+            "UPDATE job_tracking SET updated_at = '2020-01-01 00:00:00' "
+            "WHERE user_id = %s AND job_id = %s",
+            (user_id, job_id),
+        )
+
+    # Repeating the same status keeps the old time.
+    response = client.put(url, json={"status": "saved"}, headers=headers)
+    assert response.json()["updated_at"] == old_time
+
+    # Changing the status moves it.
+    response = client.put(url, json={"status": "applied"}, headers=headers)
+    assert response.json()["status"] == "applied"
+    assert response.json()["updated_at"] != old_time
+
+
+def test_writes_require_csrf_and_origin(test_settings, job_id, make_user):
+    client, headers, user_id = make_user()
+    url = f"/api/tracking/{job_id}"
+
+    assert client.put(url, json={"status": "saved"}, headers=headers).status_code == 200
+
+    no_token = {"Origin": ORIGIN}
+    wrong_origin = {"Origin": "https://evil.example.com", "X-CSRF-Token": headers["X-CSRF-Token"]}
+
+    for bad_headers in (no_token, wrong_origin):
+        assert client.put(
+            url, json={"status": "applied"}, headers=bad_headers
+        ).status_code == 403
+        assert client.delete(url, headers=bad_headers).status_code == 403
+
+    # Nothing changed.
+    assert tracking_rows(test_settings, job_id) == [{"user_id": user_id, "status": "saved"}]
+
+
 def test_two_users_track_same_job_differently(test_settings, job_id, make_user):
     client_a, headers_a, user_a = make_user()
     client_b, headers_b, user_b = make_user()
