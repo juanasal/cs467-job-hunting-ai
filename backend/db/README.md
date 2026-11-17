@@ -24,7 +24,7 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migration
 
 For Aiven, also add `--ssl-mode=REQUIRED`. In MySQL Workbench, select the target schema and run each migration in the same order.
 
-The session migration uses `CREATE TABLE IF NOT EXISTS`. This also makes it safe to run on a development database where the session table was already created by the earlier, conflicting `002_create_tables.sql` filename. Do not rerun migrations `001` or `002` against an existing database; migrations are intended to run once, in order.
+The session migration uses `CREATE TABLE IF NOT EXISTS`. This makes it safe to run on a development database where `user_sessions` was already created by the earlier `002_create_sessions.sql` migration. If the table already exists, MySQL leaves it unchanged. Do not rerun migrations `001` or `002` against an existing database; migrations are intended to run once, in order.
 
 Optionally load made-up development data:
 
