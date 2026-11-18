@@ -20,22 +20,6 @@ The current authentication test suite covers:
 6. Duplicate and invalid registration requests are rejected with a useful error.
 
 The implementation also enforces a 30-minute idle timeout, but the tests above do not directly test that timeout.
-The authentication integration suite verifies:
-
-- Registration and the full login, protected-route, CSRF, and logout lifecycle.
-- Replay of the original session token after logout is rejected.
-- Incorrect-password and unknown-email rejection without creating a session.
-- Successful session-row creation and session-cookie attributes.
-- Altered session token rejection.
-- Absolute expiration, including the expiration boundary.
-- Idle-timeout rejection at the 30-minute boundary.
-- Activity refresh without extending the seven-day absolute lifetime.
-- CSRF and Origin rejection: missing token, mismatched token, missing CSRF cookie, missing Origin, and untrusted Origin.
-- Rejected logout requests leave the authenticated session usable.
-- Logging out one session leaves another session for the same user usable.
-- Production cookie attributes, including the `__Host-session` name.
-
-The tests use the actual FastAPI routes and a separate MySQL database. They must not run against a database containing data you need to preserve.
 
 ## 2. Create the test database and MySQL user
 
@@ -180,7 +164,6 @@ A successful run should end with a summary similar to:
 ```text
 10 passed
 ```
-The suite includes parameterized CSRF/Origin cases. Run the command and use pytest's actual summary as the source of truth; a successful run should show all cases passing and none skipped due to missing `TEST_DB_*` settings.
 
 To run the entire backend test suite:
 

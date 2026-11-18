@@ -328,6 +328,129 @@ def test_activity_refresh_does_not_extend_absolute_lifetime(
 
     before = fetch_session(test_db_connection, token)
     response = auth_client.get("/api/auth/me")
+    assert response.status_code == 200
+    after = fetch_session(test_db_connection, token)
+
+    assert after["last_activity_at"] > before["last_activity_at"]
+    assert after["expires_at"] == before["expires_at"]
+
+
+@pytest.mark.parametrize(
+    "failure_case",
+    [
+        "missing_csrf_header",
+        "mismatched_csrf_header",
+        "missing_csrf_cookie",
+        "missing_origin",
+        "untrusted_origin",
+    ],
+)
+def test_rejected_logout_preserves_session(auth_client, failure_case):
+    _, csrf_token, _ = login_with_session(auth_client)
+
+    headers = {"Origin": TRUSTED_ORIGIN, "X-CSRF-Token": csrf_token}
+    if failure_case == "missing_csrf_header":
+        headers.pop("X-CSRF-Token")
+    elif failure_case == "mismatched_csrf_header":
+        headers["X-CSRF-Token"] = "not-the-csrf-token"
+    elif failure_case == "missing_csrf_cookie":
+        auth_client.cookies.delete("csrf_token")
+    elif failure_case == "missing_origin":
+        headers.pop("Origin")
+    elif failure_case == "untrusted_origin":
+        headers["Origin"] = "https://attacker.example"
+
+    response = auth_client.post("/api/auth/logout", headers=headers)
+    assert response.status_code == 403
+
+    # A rejected logout must not revoke the valid server-side session.
+    still_authenticated = auth_client.get("/api/auth/me")
+    assert still_authenticated.status_code == 200
+
+
+def test_logout_of_one_session_preserves_another(
+    auth_client, test_db_connection
+):
+    first_token, _, _ = login_with_session(auth_client)
+    second_login = login_test_user(auth_client)
+    assert second_login.status_code == 200
+    second_token = second_login.cookies.get(authentication.COOKIE_NAME)
+    second_csrf = second_login.cookies.get("csrf_token")
+    assert second_token and second_token != first_token
+    assert second_csrf
+
+    logout = auth_client.post(
+        "/api/auth/logout",
+        headers={"Origin": TRUSTED_ORIGIN, "X-CSRF-Token": second_csrf},
+    )
+    assert logout.status_code == 200
+
+    first_session = fetch_session(test_db_connection, first_token)
+    second_session = fetch_session(test_db_connection, second_token)
+    assert first_session is not None and first_session["revoked_at"] is None
+    assert second_session is not None and second_session["revoked_at"] is not None
+
+    first_session_access = auth_client.get(
+        "/api/auth/me",
+        headers={"Cookie": f"{authentication.COOKIE_NAME}={first_token}"},
+    )
+    assert first_session_access.status_code == 200
+
+
+
+def test_logout_database_failure_does_not_claim_success(auth_client, monkeypatch):
+    """A failed revocation must preserve cookies and return an error."""
+    login_with_session(auth_client)
+    csrf_token = auth_client.cookies.get("csrf_token")
+    original_factory = authentication.get_db_connection
+    connection_calls = 0
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def fail_second_connection():
+        nonlocal connection_calls
+        connection_calls += 1
+        if connection_calls == 2:
+            raise RuntimeError("simulated database failure during revocation")
+        with original_factory() as connection:
+            yield connection
+
+    monkeypatch.setattr(
+        authentication, "get_db_connection", fail_second_connection
+    )
+    response = auth_client.post(
+        "/api/auth/logout",
+        headers={"Origin": TRUSTED_ORIGIN, "X-CSRF-Token": csrf_token},
+    )
+
+    assert response.status_code == 500
+    assert auth_client.cookies.get(authentication.COOKIE_NAME)
+    assert auth_client.cookies.get("csrf_token")
+
+    monkeypatch.setattr(authentication, "get_db_connection", original_factory)
+    still_authenticated = auth_client.get("/api/auth/me")
+    assert still_authenticated.status_code == 200
+
+
+
+
+def test_cookie_settings_load_app_env_before_selection(monkeypatch):
+    """Cookie selection must use the environment returned by the .env loader."""
+    monkeypatch.setattr(
+        authentication,
+        "load_environment",
+        lambda: {"APP_ENV": "production"},
+    )
+
+    app_env, production, cookie_name = authentication.get_cookie_settings()
+
+    assert app_env == "production"
+    assert production is True
+    assert cookie_name == "__Host-session"
+
+
+
 
     print(f"Response Status Code: {response.status_code}")
     print(f"Response Body: {response.json()}")
