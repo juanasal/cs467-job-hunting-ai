@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from app import authentication
 from app.config import ENV_FILE, get_settings
 from app.main import app
+from app.db import get_db_connection
 
 TEST_EMAIL = "testuser_lifecycle@example.com"
 TEST_PASSWORD = "SecurePassword123!"
