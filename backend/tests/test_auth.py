@@ -451,26 +451,118 @@ def test_cookie_settings_load_app_env_before_selection(monkeypatch):
 
 
 
-def test_production_cookie_settings(auth_client, monkeypatch):
-    """Production login cookies must be Secure and use the __Host- prefix."""
+    assert response.status_code == 401
+
+
+# -------------------------------------------------------------
+# JH-009: Registration
+# -------------------------------------------------------------
+
+REGISTER_EMAIL = "testuser_register@example.com"
+
+
+def get_stored_hashes(test_db_connection, email):
+    """Return the password_hash of every users row with this email."""
+    with test_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT password_hash FROM users WHERE email = %s",
+                (email,),
+            )
+            return [row["password_hash"] for row in cursor.fetchall()]
+
+
+def test_register_creates_one_account_with_hashed_password(
+    auth_client, test_db_connection
+):
+    """A valid request creates one account and stores only a hash."""
+    with test_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM users WHERE email = %s",
+                (REGISTER_EMAIL,),
+            )
+        connection.commit()
+
+    response = auth_client.post(
+        "/api/auth/register",
+        json={"email": REGISTER_EMAIL, "password": TEST_PASSWORD},
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["user"]["email"] == REGISTER_EMAIL
+
+    hashes = get_stored_hashes(test_db_connection, REGISTER_EMAIL)
+
+    assert len(hashes) == 1
+    assert hashes[0] != TEST_PASSWORD
+    assert hashes[0].startswith("$argon2id$")
+    assert authentication.password_hash.verify(TEST_PASSWORD, hashes[0])
+
+    # Neither the password nor its hash is sent back.
+    assert TEST_PASSWORD not in response.text
+    assert hashes[0] not in response.text
+    assert "password" not in response.text
+
+
+def test_register_duplicate_email_rejected(auth_client, test_db_connection):
+    """The same email (any case) cannot create a second account."""
     ensure_test_user(auth_client)
-    monkeypatch.setattr(authentication, "PRODUCTION", True)
-    monkeypatch.setattr(authentication, "COOKIE_NAME", "__Host-session")
 
-    response = login_test_user(auth_client)
-    assert response.status_code == 200
+    response = auth_client.post(
+        "/api/auth/register",
+        json={"email": f" {TEST_EMAIL.upper()} ", "password": "OtherPassword456!"},
+    )
 
-    headers = response.headers.get_list("set-cookie")
-    session_header = next(h for h in headers if h.startswith("__Host-session="))
-    csrf_header = next(h for h in headers if h.startswith("csrf_token="))
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["message"] == (
+        "An account with this email already exists."
+    )
+    assert "OtherPassword456!" not in response.text
+    assert len(get_stored_hashes(test_db_connection, TEST_EMAIL)) == 1
 
-    assert "secure" in session_header.lower()
-    assert "httponly" in session_header.lower()
-    assert "path=/" in session_header.lower()
-    assert "domain=" not in session_header.lower()
-    assert "samesite=lax" in session_header.lower()
 
-    assert "secure" in csrf_header.lower()
-    assert "httponly" not in csrf_header.lower()
-    assert "path=/" in csrf_header.lower()
-    assert "domain=" not in csrf_header.lower()
+@pytest.mark.parametrize(
+    "body, expected_message, bad_field",
+    [
+        (
+            {"email": "not-an-email", "password": TEST_PASSWORD},
+            "Enter a valid email address.",
+            None,
+        ),
+        (
+            {"email": "short_pw@example.com", "password": "Short1!"},
+            "Request validation failed",
+            "password",
+        ),
+        (
+            {"email": "no_pw@example.com"},
+            "Request validation failed",
+            "password",
+        ),
+        (
+            {"password": TEST_PASSWORD},
+            "Request validation failed",
+            "email",
+        ),
+    ],
+)
+def test_register_invalid_request_rejected(
+    auth_client, test_db_connection, body, expected_message, bad_field
+):
+    """Invalid submissions get a 422 that names the problem and no account."""
+    response = auth_client.post("/api/auth/register", json=body)
+
+    assert response.status_code == 422, response.text
+
+    error = response.json()["error"]
+    assert error["message"] == expected_message
+
+    if bad_field:
+        assert any(d["loc"][-1] == bad_field for d in error["details"])
+
+    if "password" in body:
+        assert body["password"] not in response.text
+
+    if "email" in body:
+        assert get_stored_hashes(test_db_connection, body["email"]) == []

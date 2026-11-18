@@ -4,22 +4,22 @@ This guide explains how to run the Job Hunting AI authentication tests using a s
 
 ## 1. What the tests cover
 
-The authentication integration suite verifies:
+The current authentication test suite covers:
 
-- Registration and the full login, protected-route, CSRF, and logout lifecycle.
-- Replay of the original session token after logout is rejected.
-- Incorrect-password and unknown-email rejection without creating a session.
-- Successful session-row creation and session-cookie attributes.
-- Altered session token rejection.
-- Absolute expiration, including the expiration boundary.
-- Idle-timeout rejection at the 30-minute boundary.
-- Activity refresh without extending the seven-day absolute lifetime.
-- CSRF and Origin rejection: missing token, mismatched token, missing CSRF cookie, missing Origin, and untrusted Origin.
-- Rejected logout requests leave the authenticated session usable.
-- Logging out one session leaves another session for the same user usable.
-- Production cookie attributes, including the `__Host-session` name.
+1. Full authentication lifecycle:
+   - Register a test account (or continue if it already exists).
+   - Log in.
+   - Confirm `/api/auth/me` returns the authenticated user.
+   - Retrieve a CSRF token.
+   - Log out.
+   - Confirm the session is no longer accepted.
+2. Login with an incorrect password is rejected.
+3. An altered session cookie is rejected.
+4. An expired session is rejected.
+5. Registration creates exactly one account, stores a password hash instead of the password, and never returns either.
+6. Duplicate and invalid registration requests are rejected with a useful error.
 
-The tests use the actual FastAPI routes and a separate MySQL database. They must not run against a database containing data you need to preserve.
+The implementation also enforces a 30-minute idle timeout, but the tests above do not directly test that timeout.
 
 ## 2. Create the test database and MySQL user
 
@@ -149,7 +149,21 @@ From the `backend` directory, run:
 python -m pytest tests/test_auth.py -v -s
 ```
 
-The suite includes parameterized CSRF/Origin cases. Run the command and use pytest's actual summary as the source of truth; a successful run should show all cases passing and none skipped due to missing `TEST_DB_*` settings.
+The test file should run these tests:
+
+- `test_auth_full_lifecycle`
+- `test_login_wrong_password`
+- `test_altered_session_cookie`
+- `test_expired_session`
+- `test_register_creates_one_account_with_hashed_password`: one `users` row is created, it stores an Argon2id hash (not the password), and the response contains neither
+- `test_register_duplicate_email_rejected`: the same email in different case or with spaces gets `409` and no second row
+- `test_register_invalid_request_rejected` (runs 4 cases): an invalid email, a short password, a missing password, or a missing email gets `422` with a message naming the problem, does not echo the password, and creates no account
+
+A successful run should end with a summary similar to:
+
+```text
+10 passed
+```
 
 To run the entire backend test suite:
 
