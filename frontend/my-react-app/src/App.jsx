@@ -18,6 +18,12 @@ import StatCard from "./components/StatCard";
 import JobApplicationRow from "./components/JobApplicationRow";
 import JobPostingCard from "./components/JobPostingCard";
 
+// GenAI attribution:
+// Developed with assistance from ChatGPT (OpenAI).
+// Prompt: Integrate the JH-019 profile form into the existing React app
+// without changing job listings, dashboard, or navigation behavior.
+import ProfileForm from "./components/ProfileForm";
+
 import "./App.css";
 
 export default function App() {
@@ -410,37 +416,7 @@ export default function App() {
             <h1>Profile</h1>
             <p>Manage your profile and job search preferences.</p>
 
-            <div className="settings-card">
-              <h2>Profile Information</h2>
-              <label htmlFor="profile-name">Name</label>
-              <input id="profile-name" placeholder="Your name" />
-
-              <label htmlFor="profile-email">Email</label>
-              <input
-                id="profile-email"
-                type="email"
-                placeholder="you@example.com"
-              />
-
-              <h2>Preferences</h2>
-              <label htmlFor="preferred-role">Preferred job role</label>
-              <input id="preferred-role" placeholder="e.g. Data Analyst" />
-
-              <label htmlFor="preferred-location">Preferred location</label>
-              <input
-                id="preferred-location"
-                placeholder="e.g. Remote, California"
-              />
-
-              <button
-                className="primary-button"
-                onClick={() =>
-                  window.alert("Connect a backend to save profile settings.")
-                }
-              >
-                Save Changes
-              </button>
-            </div>
+            <ProfileForm />
           </section>
         )}
       </main>

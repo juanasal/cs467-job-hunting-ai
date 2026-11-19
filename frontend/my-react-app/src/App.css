@@ -80,3 +80,225 @@
 .user-card-active .profile-chevron {
   color: #fff;
 }
+
+/*
+GenAI attribution:
+Developed with assistance from ChatGPT (OpenAI).
+Prompt: Style the JH-019 React profile form to match the
+existing JobHunt dashboard, including skills, dropdowns,
+validation messages, and responsive layout.
+Reviewed and adapted for the CS467 Job Hunting AI project.
+*/
+
+/* Profile Page */
+
+.placeholder-page {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.placeholder-page h1 {
+  margin: 8px 0;
+  font-size: 2rem;
+}
+
+.placeholder-page > p:not(.eyebrow) {
+  color: #64748b;
+  margin-bottom: 28px;
+}
+
+.placeholder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* Profile Form */
+
+.profile-form-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.profile-form-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.profile-form-description {
+  margin-bottom: 28px;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.profile-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.profile-form-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.profile-form-field input,
+.profile-form-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.profile-form-field input:focus,
+.profile-form-field select:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+  border-color: #2563eb;
+}
+
+.profile-form-field input:disabled,
+.profile-form-field select:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+/* Skills */
+
+.profile-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-skills-list:empty {
+  display: none;
+}
+
+.profile-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.profile-skill-tag button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.profile-skill-tag button:hover {
+  color: #b91c1c;
+}
+
+.profile-add-skill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-add-skill input {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-add-skill .primary-button,
+.profile-save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-add-skill .primary-button:hover,
+.profile-save-button:hover {
+  background: #1d4ed8;
+}
+
+.profile-add-skill .primary-button:disabled,
+.profile-save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.profile-field-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* Feedback */
+
+.profile-form-error {
+  margin: 12px 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.profile-form-success {
+  margin: 12px 0;
+  color: #15803d;
+  font-size: 0.9rem;
+}
+
+.profile-save-button {
+  margin-top: 8px;
+}
+
+/* Responsive Profile Form */
+
+@media (max-width: 600px) {
+  .placeholder-page {
+    padding: 20px 0;
+  }
+
+  .profile-form-card {
+    padding: 20px;
+  }
+
+  .profile-add-skill {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-add-skill .primary-button {
+    width: 100%;
+  }
+}
