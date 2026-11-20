@@ -58,7 +58,7 @@ jobs:
 
           docker exec -i ${{ job.services.mysql.id }} \
             mysql -uroot -prootpassword test_db \
-            < db/migrations/002_create_tables.sql
+            < db/migrations/003_create_user_sessions.sql
 
           docker exec -i ${{ job.services.mysql.id }} \
             mysql -uroot -prootpassword test_db \

@@ -85,7 +85,8 @@ USE job_hunting_ai_test;
 Execute the migration files in order:
 
 1. `backend/db/migrations/001_create_tables.sql`
-2. `backend/db/migrations/002_create_tables.sql`
+2. `backend/db/migrations/002_add_jobs_first_seen_at.sql`
+3. `backend/db/migrations/003_create_user_sessions.sql`
 
 Make sure `job_hunting_ai_test` is the active schema before executing each migration.
 
@@ -224,7 +225,7 @@ USE job_hunting_ai_test;
 SHOW TABLES;
 ```
 
-Then execute both migrations in order.
+Then execute the three migrations in numerical order.
 
 ### Tests connect to the wrong database
 
@@ -262,6 +263,10 @@ After the automated tests pass, these behaviors can also be checked through the 
 - [ ] Request `/api/auth/me` again and confirm the request is unauthorized.
 - [ ] Confirm an invalid or altered session cookie is rejected.
 - [ ] Confirm an expired session is rejected.
+- [ ] Confirm an idle session is rejected after 30 minutes.
+- [ ] Confirm logout rejects replay of the original session token.
+- [ ] Confirm an invalid CSRF or Origin request does not revoke the session.
+- [ ] Confirm logging out one browser session leaves another browser session active.
 
 ## 9. Security reminders
 
@@ -271,6 +276,8 @@ After the automated tests pass, these behaviors can also be checked through the 
 - Keep passwords in local environment variables or an untracked `.env` file.
 - Never commit `.env` files, database passwords, session tokens, or other secrets.
 - The application generates a random session token for the browser cookie and stores only its SHA-256 hash in `user_sessions`.
-- Logout revokes the server-side session and clears the session and CSRF cookies.
+- Logout revokes the server-side session and clears the session and CSRF cookies only after the database confirms the revocation.
 - In production, the session cookie uses the `__Host-session` name and secure cookie settings. Local development uses the `session` cookie name.
-- The current automated tests check session expiration but do not directly simulate the 30-minute idle timeout.
+- Session validation locks the session row while checking and refreshing activity. Requests that passed validation before logout commits may finish; validations started after the commit must reject the revoked token.
+- A logout database failure returns HTTP 500 and does not report success or clear cookies as though revocation succeeded.
+- The production-cookie test verifies cookie attributes; it does not prove direct cross-site Vercel-to-Render cookie behavior. Use a same-site proxy or deliberately configure `SameSite=None; Secure` before deploying that topology.
