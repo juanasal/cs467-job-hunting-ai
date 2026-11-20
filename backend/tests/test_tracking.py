@@ -227,4 +227,3 @@ def test_cannot_change_another_users_tracking(test_settings, job_id, make_user):
 
     rows = {row["user_id"]: row["status"] for row in tracking_rows(test_settings, job_id)}
     assert rows == {user_a: "saved", user_b: "dismissed"}
-
