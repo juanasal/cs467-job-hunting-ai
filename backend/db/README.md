@@ -19,7 +19,10 @@ Run from the repository root. The commands prompt for the database password.
 ```bash
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/001_create_tables.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_add_jobs_first_seen_at.sql
-mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_create_user_sessions.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_create_tables.sql
+
+# 2. (Optional) Load the example data
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
 ```
 
 For Aiven, also add `--ssl-mode=REQUIRED`. In MySQL Workbench, select the target schema and run each migration in the same order.
@@ -91,9 +94,8 @@ Deleting a user deletes all of their rows in the other tables, including their a
 
 ## Known limitations
 
-- Deleting a job also deletes users' saved/applied rows for it. Do not delete expired jobs until a soft-delete field is designed.
-- The backend must validate that required profile lists contain at least one item; the database cannot enforce that cross-row rule.
-
+- Deleting a job also deletes users' saved/applied rows for it, so don't delete expired jobs for now. To hide them later, we could add an `is_active` column, but `DATA_CONTRACT.md` must be updated first.
+- The data contract requires skills, job titles, and locations, but the database can't check that a user has at least one of each. The backend must check this before saving.
 
 ## AI use
 
