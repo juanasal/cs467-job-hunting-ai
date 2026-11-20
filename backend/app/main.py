@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_frontend_origins, get_settings
 from app.authentication import router as auth_router
+from app.tracking import router as tracking_router
 from app.profile import router as profile_router
 
 
@@ -44,6 +45,7 @@ app.add_middleware(
 
 # Register authentication and profile endpoints.
 app.include_router(auth_router)
+app.include_router(tracking_router)
 app.include_router(profile_router)
 
 
