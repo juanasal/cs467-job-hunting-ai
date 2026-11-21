@@ -1,5 +1,5 @@
 -- 002_create_sessions.sql
-CREATE TABLE user_sessions (
+CREATE TABLE IF NOT EXISTS user_sessions (
     session_id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id          INT UNSIGNED NOT NULL,
     token_hash       CHAR(64) NOT NULL,
