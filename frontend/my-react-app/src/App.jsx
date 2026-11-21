@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
   Search,
@@ -23,6 +23,7 @@ import JobPostingCard from "./components/JobPostingCard";
 // Prompt: Integrate the JH-019 profile form into the existing React app
 // without changing job listings, dashboard, or navigation behavior.
 import ProfileForm from "./components/ProfileForm";
+import LoginForm from "./components/LoginForm";
 
 import "./App.css";
 
@@ -33,7 +34,69 @@ export default function App() {
   const [filter, setFilter] = useState("All Statuses");
   const [selectedJob, setSelectedJob] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authMessage, setAuthMessage] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/auth/me", { credentials: "include", signal: controller.signal })
+      .then(async (response) => {
+        if (response.status === 401) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error?.message || "Unable to check your session.");
+        return data.user;
+      })
+      .then((currentUser) => { if (!controller.signal.aborted) setUser(currentUser); })
+      .catch(() => { if (!controller.signal.aborted) setAuthMessage("Could not check your sign-in status. You can still try signing in."); })
+      .finally(() => { if (!controller.signal.aborted) setAuthLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  async function handleLogout() {
+    setAuthMessage("");
+    setLoggingOut(true);
+    try {
+      const csrfResponse = await fetch("/api/auth/csrf", { credentials: "include" });
+      const csrfData = await csrfResponse.json().catch(() => ({}));
+      if (!csrfResponse.ok || !csrfData.csrf_token) {
+        throw new Error("Could not verify your session. Please try logging out again.");
+      }
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-CSRF-Token": csrfData.csrf_token },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        setUser(null);
+        setActivePage("Dashboard");
+        setSelectedJob(null);
+        setAuthMessage("Your session expired. You are signed out.");
+        return;
+      }
+      if (!response.ok) throw new Error(data?.error?.message || data?.detail || "Unable to log out. Please try again.");
+      setUser(null);
+      setActivePage("Dashboard");
+      setSelectedJob(null);
+      setAuthMessage("");
+    } catch (err) {
+      if (err instanceof TypeError) {
+        setAuthMessage("Cannot connect to the server. Check your connection and try again.");
+      } else {
+        setAuthMessage(err.message || "Unable to log out. Please try again.");
+      }
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  function handleAuthAction() {
+    if (user) handleLogout();
+    else setLoginOpen(true);
+  }
 
   // Job Search Filters
   const [jobTitleSearch, setJobTitleSearch] = useState("");
@@ -154,8 +217,11 @@ export default function App() {
       <Sidebar
         activePage={activePage}
         onNavigate={navigate}
-        loggedIn={loggedIn}
-        onToggleLogin={() => setLoggedIn((value) => !value)}
+        loggedIn={Boolean(user)}
+        userEmail={user?.email}
+        onToggleLogin={handleAuthAction}
+        authLoading={authLoading}
+        loggingOut={loggingOut}
         sidebarOpen={sidebarOpen}
       />
 
@@ -171,10 +237,11 @@ export default function App() {
           <span className="breadcrumb">Workspace / {activePage}</span>
           <div className="topbar-right">
             <span className="topbar-label">JOB APPLICATIONS</span>
-            <div className="avatar small-avatar">U</div>
+            <div className="avatar small-avatar">{user?.email?.[0]?.toUpperCase() || "U"}</div>
           </div>
         </header>
 
+        {authMessage && <p className="auth-status" role="status">{authMessage}</p>}
         {activePage === "Job Postings" ? (
           <section className="postings-page">
             <div className="page-heading postings-heading">
@@ -416,7 +483,11 @@ export default function App() {
             <h1>Profile</h1>
             <p>Manage your profile and job search preferences.</p>
 
-            <ProfileForm />
+            <ProfileForm onSessionExpired={() => {
+              setUser(null);
+              setAuthMessage("Your session expired. Please sign in again.");
+              setLoginOpen(true);
+            }} />
           </section>
         )}
       </main>
@@ -463,6 +534,16 @@ export default function App() {
             </button>
           </section>
         </div>
+      )}
+      {loginOpen && (
+        <LoginForm
+          onClose={() => setLoginOpen(false)}
+          onLogin={(currentUser) => {
+            setUser(currentUser);
+            setLoginOpen(false);
+            setAuthMessage("");
+          }}
+        />
       )}
     </div>
   );
