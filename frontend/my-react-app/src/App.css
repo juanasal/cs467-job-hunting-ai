@@ -282,6 +282,55 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   margin-top: 8px;
 }
 
+.auth-backdrop { z-index: 60; }
+.auth-card {
+  position: relative;
+  width: min(100%, 430px);
+  padding: 32px;
+  border: 1px solid #e4eaf3;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 70px #0c19352b;
+}
+.auth-card h1 {
+  margin: 0;
+  color: #17243a;
+  font-size: 25px;
+  letter-spacing: -0.8px;
+}
+.auth-description { margin: 9px 0 25px; color: #73819a; line-height: 1.5; }
+.auth-close { position: absolute; top: 16px; right: 16px; font-size: 24px; }
+.auth-submit { width: 100%; margin-top: 6px; }
+.auth-submit:disabled, .login-item:disabled { opacity: 0.65; cursor: wait; }
+.auth-switch {
+  margin: 22px 0 0;
+  color: #73819a;
+  font-size: 12px;
+  text-align: center;
+}
+.auth-switch button {
+  padding: 0;
+  border: 0;
+  color: #2563eb;
+  background: transparent;
+  font-weight: 600;
+}
+.auth-switch button:hover { text-decoration: underline; }
+.auth-switch button:disabled { cursor: wait; opacity: 0.65; }
+.auth-status {
+  margin: 14px 37px 0;
+  padding: 10px 13px;
+  border-radius: 8px;
+  color: #8a5a00;
+  background: #fff5df;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .auth-status { margin-right: 17px; margin-left: 17px; }
+  .auth-card { padding: 27px 22px; }
+}
+
 /* Responsive Profile Form */
 
 @media (max-width: 600px) {
