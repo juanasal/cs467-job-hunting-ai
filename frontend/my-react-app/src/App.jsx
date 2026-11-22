@@ -36,7 +36,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loginOpen, setLoginOpen] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
   const [authMessage, setAuthMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -50,8 +49,7 @@ export default function App() {
         return data.user;
       })
       .then((currentUser) => { if (!controller.signal.aborted) setUser(currentUser); })
-      .catch(() => { if (!controller.signal.aborted) setAuthMessage("Could not check your sign-in status. You can still try signing in."); })
-      .finally(() => { if (!controller.signal.aborted) setAuthLoading(false); });
+      .catch(() => { if (!controller.signal.aborted) setAuthMessage("Could not check your sign-in status. You can still try signing in."); });
     return () => controller.abort();
   }, []);
 
@@ -220,7 +218,6 @@ export default function App() {
         loggedIn={Boolean(user)}
         userEmail={user?.email}
         onToggleLogin={handleAuthAction}
-        authLoading={authLoading}
         loggingOut={loggingOut}
         sidebarOpen={sidebarOpen}
       />

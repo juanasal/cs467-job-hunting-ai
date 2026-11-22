@@ -12,7 +12,6 @@ export default function Sidebar({
   loggedIn,
   userEmail,
   onToggleLogin,
-  authLoading,
   loggingOut,
   sidebarOpen,
 }) {
@@ -60,9 +59,9 @@ export default function Sidebar({
 
       <div className="sidebar-bottom">
         <div className="sidebar-divider" />
-        <button className="nav-item login-item" onClick={onToggleLogin} disabled={authLoading || loggingOut}>
+        <button className="nav-item login-item" onClick={onToggleLogin} disabled={loggingOut}>
           {loggedIn ? <LogOut size={19} /> : <LogIn size={19} />}
-          <span>{authLoading ? "Checking session..." : loggingOut ? "Logging out..." : loggedIn ? "Log Out" : "Log In"}</span>
+          <span>{loggingOut ? "Logging out..." : loggedIn ? "Log Out" : "Log In"}</span>
         </button>
       </div>
     </aside>
