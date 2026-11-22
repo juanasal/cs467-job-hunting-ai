@@ -12,6 +12,7 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
 
 import { useEffect, useState } from "react";
 import { Plus, Save, X } from "lucide-react";
+import { apiFetch } from "../api";
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "High School" },
@@ -40,7 +41,7 @@ function getErrorMessage(data, fallback) {
   return fallback;
 }
 
-export default function ProfileForm({ onSessionExpired }) {
+export default function ProfileForm() {
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
   const [educationLevel, setEducationLevel] = useState("");
@@ -55,15 +56,13 @@ export default function ProfileForm({ onSessionExpired }) {
 
     async function fetchProfile() {
       try {
-        const response = await fetch("/api/profile", {
-          credentials: "include",
+        const response = await apiFetch("/api/profile", {
           signal: controller.signal,
         });
 
         if (controller.signal.aborted) return;
 
         if (response.status === 401) {
-          onSessionExpired?.();
           throw new Error("Please log in to view your profile.");
         }
 
@@ -162,27 +161,9 @@ export default function ProfileForm({ onSessionExpired }) {
     setSaving(true);
 
     try {
-      const csrfResponse = await fetch("/api/auth/csrf", {
-        credentials: "include",
-      });
-
-      if (!csrfResponse.ok) {
-        throw new Error("Unable to verify your session. Please log in.");
-      }
-
-      const csrfData = await csrfResponse.json();
-
-      if (!csrfData.csrf_token) {
-        throw new Error("CSRF token is missing.");
-      }
-
-      const response = await fetch("/api/profile", {
+      const response = await apiFetch("/api/profile", {
         method: "PUT",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfData.csrf_token,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           skills,
           education_level: educationLevel,
@@ -194,7 +175,6 @@ export default function ProfileForm({ onSessionExpired }) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          onSessionExpired?.();
           throw new Error("Please log in to save your profile.");
         }
 

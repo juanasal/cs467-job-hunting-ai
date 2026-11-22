@@ -326,6 +326,8 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   font-size: 12px;
 }
 
+.auth-card .auth-notice { margin: 0 28px 18px 0; }
+
 @media (max-width: 760px) {
   .auth-status { margin-right: 17px; margin-left: 17px; }
   .auth-card { padding: 27px 22px; }

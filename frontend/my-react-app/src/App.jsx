@@ -24,8 +24,14 @@ import JobPostingCard from "./components/JobPostingCard";
 // without changing job listings, dashboard, or navigation behavior.
 import ProfileForm from "./components/ProfileForm";
 import LoginForm from "./components/LoginForm";
+import { apiFetch, setUnauthorizedHandler } from "./api";
 
 import "./App.css";
+
+// Pages that need a signed-in user. Add the dashboard here once it uses real user data.
+const PRIVATE_PAGES = ["Profile"];
+// Where to send the user after signing in if they weren't headed to a specific private page.
+const DEFAULT_PRIVATE_PAGE = "Profile";
 
 export default function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -39,6 +45,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authMessage, setAuthMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [returnPage, setReturnPage] = useState(null);
+  const [loginNotice, setLoginNotice] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -55,25 +63,33 @@ export default function App() {
     return () => controller.abort();
   }, []);
 
+  // Any 401 from apiFetch means the session is gone: clear signed-in UI and ask to sign in again.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      setSelectedJob(null);
+      if (PRIVATE_PAGES.includes(activePage)) {
+        setReturnPage(activePage);
+        setActivePage("Dashboard");
+      }
+      setLoginNotice("Your session expired. Please sign in again.");
+      setLoginOpen(true);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [activePage]);
+
   async function handleLogout() {
     setAuthMessage("");
     setLoggingOut(true);
     try {
-      const csrfResponse = await fetch("/api/auth/csrf", { credentials: "include" });
-      const csrfData = await csrfResponse.json().catch(() => ({}));
-      if (!csrfResponse.ok || !csrfData.csrf_token) {
-        throw new Error("Could not verify your session. Please try logging out again.");
-      }
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-        headers: { "X-CSRF-Token": csrfData.csrf_token },
-      });
+      const response = await apiFetch("/api/auth/logout", { method: "POST" });
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        setUser(null);
+        // apiFetch already cleared the UI; the user wanted to sign out, so don't reopen sign-in.
+        setLoginOpen(false);
+        setLoginNotice("");
+        setReturnPage(null);
         setActivePage("Dashboard");
-        setSelectedJob(null);
         setAuthMessage("Your session expired. You are signed out.");
         return;
       }
@@ -165,6 +181,12 @@ export default function App() {
   };
 
   function navigate(page) {
+    if (PRIVATE_PAGES.includes(page) && !user) {
+      setReturnPage(page);
+      setSidebarOpen(false);
+      setLoginOpen(true);
+      return;
+    }
     setActivePage(page);
     setSidebarOpen(false);
     setSelectedJob(null);
@@ -483,11 +505,7 @@ export default function App() {
             <h1>Profile</h1>
             <p>Manage your profile and job search preferences.</p>
 
-            <ProfileForm onSessionExpired={() => {
-              setUser(null);
-              setAuthMessage("Your session expired. Please sign in again.");
-              setLoginOpen(true);
-            }} />
+            {user && <ProfileForm />}
           </section>
         )}
       </main>
@@ -537,11 +555,20 @@ export default function App() {
       )}
       {loginOpen && (
         <LoginForm
-          onClose={() => setLoginOpen(false)}
+          notice={loginNotice}
+          onClose={() => {
+            setLoginOpen(false);
+            setLoginNotice("");
+            setReturnPage(null);
+          }}
           onLogin={(currentUser) => {
             setUser(currentUser);
             setLoginOpen(false);
+            setLoginNotice("");
             setAuthMessage("");
+            setActivePage(returnPage || DEFAULT_PRIVATE_PAGE);
+            setReturnPage(null);
+            setSelectedJob(null);
           }}
         />
       )}
