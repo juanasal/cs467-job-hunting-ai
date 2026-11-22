@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, LogIn, ChevronRight, LayoutDashboard, FileText, Briefcase } from "lucide-react";
+import { BriefcaseBusiness, LogIn, LogOut, ChevronRight, LayoutDashboard, FileText, Briefcase } from "lucide-react";
 
 const navItems = [
   { label: "Job Postings", icon: Briefcase },
@@ -10,7 +10,9 @@ export default function Sidebar({
   activePage,
   onNavigate,
   loggedIn,
+  userEmail,
   onToggleLogin,
+  loggingOut,
   sidebarOpen,
 }) {
   return (
@@ -46,10 +48,10 @@ export default function Sidebar({
           }`}
           onClick={() => onNavigate("Profile")}
         >
-          <div className="avatar">U</div>
+          <div className="avatar">{userEmail?.[0]?.toUpperCase() || "U"}</div>
           <div className="user-info">
-            <strong>Your Profile</strong>
-            <span>View profile & preferences</span>
+            <strong>{userEmail || "Your Profile"}</strong>
+            <span>{loggedIn ? "View profile & preferences" : "Sign in to manage your profile"}</span>
           </div>
           <ChevronRight size={17} className="profile-chevron" />
         </button>
@@ -57,9 +59,9 @@ export default function Sidebar({
 
       <div className="sidebar-bottom">
         <div className="sidebar-divider" />
-        <button className="nav-item login-item" onClick={onToggleLogin}>
-          <LogIn size={19} />
-          <span>{loggedIn ? "Log Out" : "Log In"}</span>
+        <button className="nav-item login-item" onClick={onToggleLogin} disabled={loggingOut}>
+          {loggedIn ? <LogOut size={19} /> : <LogIn size={19} />}
+          <span>{loggingOut ? "Logging out..." : loggedIn ? "Log Out" : "Log In"}</span>
         </button>
       </div>
     </aside>
