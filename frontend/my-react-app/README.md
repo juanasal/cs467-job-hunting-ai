@@ -60,6 +60,8 @@ If you are developing a production application, we recommend using TypeScript wi
 ## AI Usage Citation
 OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, conversational share link, OpenAI, 2026, https://chatgpt.com/share/6ad91d99-e174-83e8-8fc4-19355e77abe8.
 
+The login-required requests and private pages (JH-014: `src/api.js`, the private page and session-expiry handling in `src/App.jsx`, the `apiFetch` changes in `src/components/ProfileForm.jsx`, the `notice` prop in `src/components/LoginForm.jsx`, the `.auth-notice` style in `src/App.css`, and the "Requests that need login" section of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y](https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y) documents the GenAI interaction that led to my code.
+
 ## How to Run
 1. Navigate to frontend -> my-react-app
 2. npm install in terminal
