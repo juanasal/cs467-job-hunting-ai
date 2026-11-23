@@ -104,3 +104,19 @@ def test_multiline_heading_and_literal_skill_boundaries():
         target("name", "c++", "required", "- C++"),
         target("name", "react.js", "required", "- React.js"),
     ]
+
+
+@pytest.mark.parametrize("heading", ["", "Required skills:\n"])
+def test_semicolon_separates_explicit_priorities(heading):
+    result = extract_requirements({"description": heading + "Python required; AWS preferred."})
+    assert result["skills"] == [
+        target("name", "python", "required", "Python required"),
+        target("name", "aws", "preferred", "AWS preferred."),
+    ]
+
+
+def test_unpunctuated_employer_heading_ends_qualification_section():
+    result = extract_requirements({
+        "description": "Required skills:\n- Python\nOur tech stack\n- Java"
+    })
+    assert result["skills"] == [target("name", "python", "required", "- Python")]

@@ -49,7 +49,7 @@ compatible recommendations.
 Call `app.job_requirements.extract_requirements(job)` with a normalized job dictionary.
 It reads `description` and returns `technical_skills`, `soft_skills`, their combined
 `skills` list, scorable `education` and `experience` minima, and `warnings`. All targets
-include their priority and an exact source sentence or bullet. `education_mentions` and
+include their priority and an exact source sentence, clause, or bullet. `education_mentions` and
 `experience_mentions` retain individual explicit minima when multiple statements occur.
 
 ```python
@@ -70,7 +70,9 @@ or blank descriptions.
   or senior experience. Numeric years have no agreed mapping to these levels.
 
 The rules recognize simple lists, qualification headings, and phrases such as “must
-have”, “required”, “preferred”, and “experience with”. Wording such as “should have”
+have”, “required”, “preferred”, and “experience with”. An explicit priority suffix
+before a semicolon closes that clause. A new heading or an
+unrecognized plain-text line ends the preceding qualification section. Wording such as “should have”
 has `unspecified` priority. Negation and alternatives can suppress a whole statement.
 Ambiguous abbreviations such as `R` and `MS` are skipped. Conflicting level statements
 leave the scorable minimum empty and produce a warning. The fixed vocabulary and simple
@@ -80,8 +82,8 @@ uses the visible text.
 
 ## Preparing structured requirements
 
-Call `prepare_requirements(job, structured, warnings=())` with hand-authored requirements
-from the available description. Each target needs `priority` (`required`, `preferred`,
+Call `prepare_requirements(job, structured, warnings=())` with extracted or hand-authored
+requirements from the available description. Each target needs `priority` (`required`, `preferred`,
 `unspecified`) and `evidence` (one exact nonempty source span). Skills additionally need
 `name`; education/experience need an allowed `minimum`. Supply `skills: []` and
 `education: None` / `experience: None` when unknown or ambiguous. Optional omitted level

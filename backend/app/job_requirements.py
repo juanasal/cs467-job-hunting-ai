@@ -43,6 +43,20 @@ _DEGREE = re.compile(r"(associate|bachelor|master)(?:['’]s)? degree")
 _LEVEL = re.compile(r"(entry|mid|senior)(?:[- ]level)?(?: (?:work|professional))? experience")
 
 
+def _statements(description):
+    for match in _STATEMENT.finditer(description):
+        evidence = match[0].strip()
+        clauses = evidence.split(";")
+        # A local priority cue applies to its clause. Keep shared heading lists
+        # intact so each target retains the heading in its supporting text.
+        if not evidence.endswith("?") and any(
+            _SUFFIX.search(normalize_skill(clause)) for clause in clauses[:-1]
+        ):
+            yield from (clause.strip() for clause in clauses if clause.strip())
+        else:
+            yield evidence
+
+
 def _qualification(statement, section_priority):
     """Return the candidate text and priority if it has a qualification cue."""
     heading = _HEADING.match(statement)
@@ -59,12 +73,14 @@ def _qualification(statement, section_priority):
     if not (heading or suffix or prefix or section_priority):
         return None
 
-    priority = section_priority or "unspecified"
+    priority = (section_priority or "unspecified") if heading else "unspecified"
     if prefix and prefix[1] in {"must have", "must know", "need to have"}:
         priority = "required"
     if suffix:
         suffix_priority = "required" if suffix[1] == "required" else "preferred"
         priority = suffix_priority if priority in {"unspecified", suffix_priority} else "unspecified"
+    elif not (heading or prefix):
+        priority = section_priority
     return statement, priority
 
 
@@ -94,8 +110,7 @@ def extract_requirements(job: Mapping) -> dict:
         if description.rstrip().endswith(("...", "…")):
             warnings.add("description_partial")
         section_priority = None
-        for match in _STATEMENT.finditer(description):
-            evidence = match[0].strip()
+        for evidence in _statements(description):
             statement = normalize_skill(evidence.rstrip(".!?…").lstrip("-•* "))
             heading = _HEADING.match(statement)
             if heading and not statement[heading.end():]:
@@ -113,6 +128,8 @@ def extract_requirements(job: Mapping) -> dict:
                 warnings.add("qualification_alternative")
                 continue
             target = {"priority": priority, "evidence": evidence}
+            target_lists = (technical, soft, education, experience)
+            target_count = sum(map(len, target_lists))
             for item in _LIST_SEPARATOR.split(body):
                 item = re.sub(r"^(?:an?|the)\s+", "", item)
                 degree = _DEGREE.fullmatch(item)
@@ -132,6 +149,9 @@ def extract_requirements(job: Mapping) -> dict:
                     warnings.add("qualification_abbreviation_ambiguous")
                 elif re.search(r"\byears?\b", item) and "experience" in item:
                     warnings.add("experience_level_unmapped")
+            if (section_priority and not evidence.startswith(("-", "•", "*"))
+                    and target_count == sum(map(len, target_lists))):
+                section_priority = None
 
     return {
         "technical_skills": technical,
