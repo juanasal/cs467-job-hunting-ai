@@ -14,10 +14,30 @@ src/
 ├── data/                        # Static and mock data files (easy to swap for APIs)
 │   ├── applications.js          # Initial array of tracked user job applications
 │   └── jobPostings.js           # Sample/explore job listings available to track
+├── api.js                       # apiFetch(): shared helper for API requests that need login
 ├── App.css                      # Shared styling stylesheet for the app shell and components
 ├── App.jsx                      # Core layout wrapper, page state, router, and business logic
 └── main.jsx                     # React entry point rendering App into the DOM
 ```
+
+## Requests that need login
+
+Use `apiFetch` from `src/api.js` for any backend request that needs a signed-in user:
+
+```js
+import { apiFetch } from "../api";
+
+const response = await apiFetch("/api/profile");
+const saved = await apiFetch("/api/profile", {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(profile),
+});
+```
+
+- Paths must be relative and start with `/api/`. These requests go through the Vite proxy in development and the Vercel rewrite in production (see `documentation/decisions/authentication.md`), so the session cookie only goes to the configured backend.
+- Cookies are always sent. POST, PUT, PATCH and DELETE requests also get the `X-CSRF-Token` header automatically.
+- A `401` response signs the user out in the UI and opens the sign-in dialog. Pages that need login are listed in `PRIVATE_PAGES` in `App.jsx`. Opening one while signed out opens sign-in, and the user is taken there after signing in.
 
 # React + Vite
 
@@ -39,6 +59,8 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## AI Usage Citation
 OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, conversational share link, OpenAI, 2026, https://chatgpt.com/share/6ad91d99-e174-83e8-8fc4-19355e77abe8.
+
+The login-required requests and private pages (JH-014: `src/api.js`, the private page and session-expiry handling in `src/App.jsx`, the `apiFetch` changes in `src/components/ProfileForm.jsx`, the `notice` prop in `src/components/LoginForm.jsx`, the `.auth-notice` style in `src/App.css`, and the "Requests that need login" section of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y](https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y) documents the GenAI interaction that led to my code.
 
 ## How to Run
 1. Navigate to frontend -> my-react-app

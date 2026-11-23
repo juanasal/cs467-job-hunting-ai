@@ -4,7 +4,7 @@ function messageFrom(data, fallback) {
   return data?.error?.message || data?.detail || fallback;
 }
 
-export default function LoginForm({ onLogin, onClose }) {
+export default function LoginForm({ onLogin, onClose, notice }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,6 +57,7 @@ export default function LoginForm({ onLogin, onClose }) {
     }}>
       <section className="auth-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
         <button className="icon-button auth-close" aria-label="Close sign in" onClick={onClose}>×</button>
+        {notice && <p className="auth-status auth-notice" role="status">{notice}</p>}
         <p className="eyebrow">{mode === "login" ? "WELCOME BACK" : "GET STARTED"}</p>
         <h1 id="login-title">{mode === "login" ? "Sign in to JobHunt" : "Create your account"}</h1>
         <p className="auth-description">
