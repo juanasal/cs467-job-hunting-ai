@@ -6,9 +6,9 @@ qualifications matched, which did not, and where information was missing. Skills
 contribute up to 80 points; education and experience can each contribute up to 10.
 The same inputs always produce the same result.
 
-For now, a caller must supply the job's qualifications in a structured list alongside
-the job record. The scorer does not read a description and work out the requirements
-itself. It matches skill names exactly after standardizing capitalization and spacing,
+The caller supplies structured qualifications alongside the job record. The rule-based
+extractor below can build those qualifications from the job's description. The scorer
+matches skill names exactly after standardizing capitalization and spacing,
 so related names such as `React` and `React.js` do not count as a match.
 
 The score describes how well the profile matches the available qualification evidence.
@@ -44,10 +44,46 @@ must evaluate preferences separately and keep exclusions distinct from scores an
 unknown compatibility. Until then results must not be presented as eligible or fully
 compatible recommendations.
 
+## Extracting requirements from job descriptions
+
+Call `app.job_requirements.extract_requirements(job)` with a normalized job dictionary.
+It reads `description` and returns `technical_skills`, `soft_skills`, their combined
+`skills` list, scorable `education` and `experience` minima, and `warnings`. All targets
+include their priority and an exact source sentence, clause, or bullet. `education_mentions` and
+`experience_mentions` retain individual explicit minima when multiple statements occur.
+
+```python
+extracted = extract_requirements(job)
+prepared = prepare_requirements(job, extracted, warnings=extracted["warnings"])
+```
+
+This preparation step requires a persisted job ID and a nonblank description. Extraction
+also works on normalized jobs before persistence and returns empty targets for missing
+or blank descriptions.
+
+- Technical vocabulary covers Python, SQL, AWS, Docker, Git, Linux, Excel, Java,
+  JavaScript, TypeScript, C++, C#, PostgreSQL, React, React.js, and UI development.
+- Soft-skill vocabulary covers communication (including written and verbal communication),
+  communication skills, teamwork, leadership, and problem solving.
+- Education recognizes high school diploma, associate, bachelor and master degrees,
+  and doctorate, doctoral degree or PhD. Experience recognizes explicit entry, mid,
+  or senior experience. Numeric years have no agreed mapping to these levels.
+
+The rules recognize simple lists, qualification headings, and phrases such as “must
+have”, “required”, “preferred”, and “experience with”. An explicit priority suffix
+before a semicolon closes that clause. A new heading or an
+unrecognized plain-text line ends the preceding qualification section. Wording such as “should have”
+has `unspecified` priority. Negation and alternatives can suppress a whole statement.
+Ambiguous abbreviations such as `R` and `MS` are skipped. Conflicting level statements
+leave the scorable minimum empty and produce a warning. The fixed vocabulary and simple
+statement grammar can miss qualifications in complex sentences. An ending ellipsis
+produces `description_partial`; an unmarked cutoff may go undetected. Extraction only
+uses the visible text.
+
 ## Preparing structured requirements
 
-Call `prepare_requirements(job, structured, warnings=())` with hand-authored requirements
-from the available description. Each target needs `priority` (`required`, `preferred`,
+Call `prepare_requirements(job, structured, warnings=())` with extracted or hand-authored
+requirements from the available description. Each target needs `priority` (`required`, `preferred`,
 `unspecified`) and `evidence` (one exact nonempty source span). Skills additionally need
 `name`; education/experience need an allowed `minimum`. Supply `skills: []` and
 `education: None` / `experience: None` when unknown or ambiguous. Optional omitted level
@@ -161,7 +197,7 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
 From `backend/` with dependencies installed:
 
 ```bash
-python -m pytest tests/test_job_matching.py -q
+python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q
 python -m pytest -q
 ```
 
@@ -176,8 +212,7 @@ proof of inability. Sparse requirements can also inflate visible skill coverage:
 matched target can outscore four of five matched targets. Component coverage does not
 measure description completeness or confidence.
 
-JH-035 remains responsible for extracting applicant requirements, priorities, supporting
-spans, ambiguities, and partial-description warnings. JH-036 remains responsible for a
-separately versioned related-skill method and its evaluation. Preference policy and its
+JH-036 remains responsible for a separately versioned related-skill method and its
+evaluation. Preference policy and its
 supporting contract gaps, recommendation assembly, ranking, and public diagnostic output
 remain separate work; this baseline resolves none of those proposals silently.
