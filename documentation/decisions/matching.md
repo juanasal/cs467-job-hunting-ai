@@ -451,9 +451,10 @@ The same examples also provide a few useful boundary checks:
 ## How the team can use these examples
 
 The workflow starts with input validation, then separates four responsibilities. These
-are conceptual interfaces. The exact-match baseline implements qualification scoring and explicit
-requirement preparation as described in the [baseline guide](../JOB_MATCHING.md); the
-other responsibilities remain future work. These interfaces do not change the API:
+describe how the workflow is organized. Rule-based qualification extraction, explicit
+requirement preparation, and exact-match qualification scoring are implemented in the
+[matching guide](../JOB_MATCHING.md). Worker restrictions, preference evaluation,
+recommendation assembly, and ranking remain future work. These interfaces do not change the API:
 
 | Component | Inputs | Outputs |
 | --- | --- | --- |
