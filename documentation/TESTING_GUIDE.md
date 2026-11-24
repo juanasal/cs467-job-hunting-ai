@@ -22,7 +22,7 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 | Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
 | Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
-| Recommendations | Rule-based requirement extraction and the pure `exact-v1` scorer | Extend `backend/tests/test_job_requirements.py` or `backend/tests/test_job_matching.py` for the behavior under test |
+| Recommendations | Rule-based requirement extraction and deterministic `exact-v1` and `related-v1` qualification scoring | Extend `backend/tests/test_job_requirements.py` or `backend/tests/test_job_matching.py` for the behavior under test |
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
@@ -154,7 +154,7 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 ## 7. Recommendation Testing
 
-The [matching guide](JOB_MATCHING.md) covers rule-based extraction and `exact-v1` qualification scoring. `backend/tests/test_job_requirements.py` checks priority, exact evidence, and incomplete descriptions. `backend/tests/test_job_matching.py` uses synthetic profiles, jobs, and hand-authored requirements with independently calculated scores. Keep those expectations versioned as matching evolves. Related-skill scoring and preference filtering remain follow-up work.
+`backend/tests/test_job_requirements.py` checks priority, exact evidence, and incomplete descriptions. `backend/tests/test_job_matching.py` checks the `exact-v1` baseline and compares it with the default `related-v1` scorer using the same extracted requirements and synthetic profiles. The comparison covers directed partial credit, zero-credit controls, and exact credit taking precedence. Preference filtering remains follow-up work. See the [matching guide](JOB_MATCHING.md) for the comparison results.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.

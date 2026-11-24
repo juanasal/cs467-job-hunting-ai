@@ -73,9 +73,11 @@ python -m pytest tests/test_job_normalizer.py
 
 ## Qualification scoring
 
-`app/job_matching.py` provides the pure `exact-v1` baseline with explicit prepared
-requirements. See [usage, rules, and limitations](../documentation/JOB_MATCHING.md).
-Run `python -m pytest tests/test_job_matching.py -q` from `backend/`.
+`app/job_requirements.py` extracts qualifications from job descriptions.
+`app/job_matching.py` scores prepared requirements using `related-v1` by default.
+Pass `method_version="exact-v1"` to select the exact-match baseline.
+See [usage, rules, and comparison results](../documentation/JOB_MATCHING.md).
+Run `python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q` from `backend/`.
 
 ## Database setup
 

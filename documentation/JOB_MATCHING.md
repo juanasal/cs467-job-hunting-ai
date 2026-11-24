@@ -188,8 +188,9 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
 - The highest credit wins per target. Equal-credit sources are resolved by normalized
   alphabetical order. Each credited target's explanation names the source skill and
   job requirement and includes the job evidence.
-- Count each normalized profile skill/target once. Highest target priority wins.
-  Matched profile strings retain their first original spelling, sorted by normalized name.
+- Count each normalized target once at its highest priority. One profile skill can
+  support multiple distinct targets. `matched_skills` lists each credited profile
+  skill once, retaining its first original spelling and sorting by normalized name.
 - Education: high_school < associate < bachelor < master < doctorate. Experience:
   entry < mid < senior. Meeting/exceeding required/preferred/unspecified minima earns
   10/5/2.5 points. Known shortfall, unknown requirements, and unevaluable education earn
