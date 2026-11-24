@@ -23,6 +23,7 @@ import JobPostingCard from "./components/JobPostingCard";
 // Prompt: Integrate the JH-019 profile form into the existing React app
 // without changing job listings, dashboard, or navigation behavior.
 import ProfileForm from "./components/ProfileForm";
+import SearchPreferencesForm from "./components/SearchPreferencesForm";
 import LoginForm from "./components/LoginForm";
 import { apiFetch, setUnauthorizedHandler } from "./api";
 
@@ -505,7 +506,12 @@ export default function App() {
             <h1>Profile</h1>
             <p>Manage your profile and job search preferences.</p>
 
-            {user && <ProfileForm />}
+            {user && (
+              <>
+                <ProfileForm />
+                <SearchPreferencesForm />
+              </>
+            )}
           </section>
         )}
       </main>
