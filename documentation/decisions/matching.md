@@ -2,18 +2,19 @@
 
 This document gives the team a starting point for building and evaluating job matching.
 The proposal has two parts: remove jobs that violate a user's strict preferences, then
-score the remaining jobs by skills, education, and experience. A later version gives
-partial credit for a small set of related skills.
+score the remaining jobs by skills, education, and experience. The implemented
+`related-v1` scorer gives partial credit for a small set of related skills.
 
 The examples describe our judgments about fit. A qualification score of 80 means strong
 alignment with visible qualifications under these rules; it does **not** mean an 80%
 chance of being hired.
 
-**Status:** qualification-scoring rules adopted for the `exact-v1` baseline;
-preference filtering and related-skill policies remain proposals. The baseline adopts
+**Status:** qualification-scoring rules are implemented as `exact-v1` and JH-036
+implements the three directed mappings below as `related-v1`. Preference filtering
+remains a proposal. The baseline adopts
 the weights, unspecified priorities, normalization, duplicate handling, final rounding,
 and qualification-fit threshold described below. See the
-[implemented baseline](../JOB_MATCHING.md) for its interface, tests, and limitations.
+[scoring documentation](../JOB_MATCHING.md) for the interface, comparison results, and limitations.
 The repository's shared input fields and 0–100 score scale are unchanged. Public
 diagnostics remain internal evaluation concepts rather than additions to the API.
 
@@ -313,8 +314,8 @@ recommendation confidence and does not solve omitted requirements.
 
 ## Related-skill method
 
-A small, reviewed lookup table can extend exact matching without an LLM, external
-service, or new dependency. The proposal starts with three one-way relationships:
+`related-v1` extends exact matching with a lookup table of three one-way
+relationships. It runs locally with the same dependencies as `exact-v1`.
 
 | Profile skill | Job target | Credit | Rationale |
 | --- | --- | ---: | --- |
@@ -468,9 +469,10 @@ score failure can be separated from an extraction failure. Description-based tes
 separately compare extracted targets, priorities, and evidence against the expectations
 below. No diagnostic adapter is required for invalid records.
 
-Once the baseline works, the related-skill method should improve MATCH-003 through
-MATCH-005 while preserving exact matches and leaving the unrelated controls weak. The
-same profiles, jobs, and expected outcomes can then compare both methods. The combined
+The implemented comparison tests use the same profiles and extracted requirements
+for both methods. They cover the related pairs from MATCH-003 through MATCH-005,
+exact-match precedence, and zero-credit controls.
+See the [recorded scores](../JOB_MATCHING.md#validation-and-limitations). The proposed combined
 workflow applies qualification weights and preference filters separately; ranking orders
 included jobs and supplies their explanations. A later proposal that gives soft
 preferences points will need its own reviewed expectations.
@@ -497,7 +499,7 @@ fairness.
 | Salary overlap, maximum limits, and predicted pay | Overlap permits an offer below the user's minimum. Predicted ranges never exclude; reliable partial ranges can establish violations. Unit provenance also needs a representation. |
 | Weights, threshold, and missing-evidence treatment | The proposed 80/10/10 split and 60-point threshold are judgments. Fixed weights can disadvantage incomplete descriptions; soft preferences currently earn no points. |
 | Requirement extraction and normalization | Structured qualifications, unspecified-priority weights, worker-location restrictions, aliases, geographic equivalences, and years-to-level mappings need agreement. |
-| Related-skill table | The direction and 0.75 credit for React, PostgreSQL, and TypeScript need agreement; no credit is validated proficiency. |
+| Related-skill evaluation | `related-v1` implements the three documented directions at 0.75 credit. The fit threshold and transfer credit remain heuristics for future evaluation. |
 | Invalid inputs and output shape | The contract requires a description but generally says missing external values use `null`; normalization skips unusable jobs. Required list cardinalities are clearer in the database README than in the contract. Match results have no eligibility or component fields; their “overall relevance” description needs reconciliation with qualification-only scoring. |
 | Adzuna access and permitted use | Continued academic access, storage/expiration, attribution, and account limits remain prerequisites for live evaluation. |
 

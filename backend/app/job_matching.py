@@ -1,4 +1,4 @@
-"""Pure exact-match qualification baseline; no extraction or preference decisions."""
+"""Pure qualification scoring with exact and related-skill methods."""
 
 from dataclasses import dataclass
 from fractions import Fraction
@@ -6,7 +6,14 @@ from typing import Mapping
 import unicodedata
 
 
-METHOD_VERSION = "exact-v1"
+METHOD_VERSION = "related-v1"
+_EXACT_METHOD_VERSION = "exact-v1"
+_RELATED_SOURCES = {
+    "ui development": ("react",),
+    "sql": ("postgresql",),
+    "javascript": ("typescript",),
+}
+_RELATED_CREDIT = Fraction(3, 4)
 _WEIGHTS = {"required": Fraction(2), "preferred": Fraction(1),
             "unspecified": Fraction(1, 2)}
 _LEVEL_CREDIT = {"required": Fraction(1), "preferred": Fraction(1, 2),
@@ -129,13 +136,18 @@ def _level_result(value, target, levels):
     }
 
 
-def score_job(profile: Mapping, job: Mapping, *, requirements: PreparedRequirements):
+def score_job(
+    profile: Mapping, job: Mapping, *, requirements: PreparedRequirements,
+    method_version: str = METHOD_VERSION,
+):
     """Score shared records using explicit prepared qualifications.
 
     Requires valid scoring fields; callers validate the rest of the shared records.
     Returns internal diagnostics plus applicable match-result fields, without time.
-    No inclusion/exclusion decision is made here.
+    Select exact-v1 to reproduce the exact-match baseline.
     """
+    if method_version not in (_EXACT_METHOD_VERSION, METHOD_VERSION):
+        raise ValueError("unknown matching method version")
     user_id = _id(profile.get("user_id"), "user_id")
     job_id = _id(job.get("job_id"), "job_id")
     description = _text(job.get("description"), "description")
@@ -156,18 +168,29 @@ def score_job(profile: Mapping, job: Mapping, *, requirements: PreparedRequireme
 
     targets = []
     matched_weight = total_weight = Fraction(0)
-    matched = []
+    matched = set()
     for target in requirements.skills:
         weight = _WEIGHTS[target.priority]
-        source = profile_skills.get(target.name)
+        source_name = None
+        credit = Fraction(0)
+        status = "unmatched"
+        if target.name in profile_skills:
+            source_name, credit, status = target.name, Fraction(1), "exact match"
+        elif method_version == METHOD_VERSION:
+            source_name = min(
+                (name for name in _RELATED_SOURCES.get(target.name, ()) if name in profile_skills),
+                default=None,
+            )
+            if source_name is not None:
+                credit, status = _RELATED_CREDIT, "related match"
+        if source_name is not None:
+            matched.add(source_name)
         total_weight += weight
-        if source is not None:
-            matched_weight += weight
-            matched.append(source)
+        matched_weight += weight * credit
         targets.append({"name": target.name, "priority": target.priority,
                         "weight": float(weight), "evidence": list(target.evidence),
-                        "profile_skill": source, "credit": int(source is not None),
-                        "status": "exact match" if source is not None else "unmatched"})
+                        "profile_skill": profile_skills.get(source_name), "credit": float(credit),
+                        "status": status})
     skill_points = 80 * matched_weight / total_weight if total_weight else Fraction(0)
     education_points, education_result = _level_result(education, requirements.education, _EDUCATION)
     experience_points, experience_result = _level_result(experience, requirements.experience, _EXPERIENCE)
@@ -177,7 +200,11 @@ def score_job(profile: Mapping, job: Mapping, *, requirements: PreparedRequireme
     if not targets:
         reasons.append("Skills: insufficient evidence; no evaluable targets.")
     for target in targets:
-        reasons.append(f"{target['name']} ({target['priority']}): {target['status']}; "
+        source = target["profile_skill"]
+        reason = target["status"]
+        if source is not None:
+            reason += f" from {source!r} (credit {target['credit']:g})"
+        reasons.append(f"{target['name']} ({target['priority']}): {reason}; "
                        f"evidence: {target['evidence']!r}.")
     for name, result in (("Education", education_result), ("Experience", experience_result)):
         reasons.append(f"{name}: {result['points']:g}/10 points; {result['status']}; "
@@ -191,8 +218,9 @@ def score_job(profile: Mapping, job: Mapping, *, requirements: PreparedRequireme
     )
     return {
         "user_id": user_id, "job_id": job_id, "match_score": rounded,
-        "matched_skills": matched, "match_explanation": " ".join(reasons),
-        "method_version": METHOD_VERSION,
+        "matched_skills": [profile_skills[name] for name in sorted(matched)],
+        "match_explanation": " ".join(reasons),
+        "method_version": method_version,
         "qualification_fit": "good" if rounded >= 60 else "weak",
         "skill_targets": targets, "education": education_result,
         "experience": experience_result,
