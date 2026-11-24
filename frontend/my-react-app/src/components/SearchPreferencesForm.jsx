@@ -7,6 +7,11 @@ Support multiple job titles, locations, and workplace types,
 validation, loading, saving, and error handling. Preserve unrelated
 preferences and reject unsupported values without silently changing
 the user's selected search restrictions.
+
+Follow-up prompt: Address PR review feedback by displaying
+field-level FastAPI validation errors from error.details instead
+of only showing the generic "Request validation failed" message.
+
 Reviewed and adapted for the CS467 Job Hunting AI project.
 */
 
@@ -30,7 +35,30 @@ const DEFAULT_PREFERENCES = {
   result_count: 20,
 };
 
+// JH-021: Show field-level API validation errors.
+// Updated with assistance from ChatGPT (OpenAI).
 function getErrorMessage(data, fallback) {
+  const details = data?.error?.details;
+
+  if (Array.isArray(details) && details.length > 0) {
+    return details
+      .map((item) => {
+        const field = Array.isArray(item.loc)
+          ? item.loc
+              .filter((part) => part !== "body")
+              .join(".")
+          : "Preference";
+
+        const message =
+          typeof item.message === "string"
+            ? item.message
+            : "Invalid value.";
+
+        return `${field || "Preference"}: ${message}`;
+      })
+      .join(" ");
+  }
+
   if (typeof data?.error?.message === "string") {
     return data.error.message;
   }
@@ -95,16 +123,24 @@ function validatePreferences(preferences) {
     return "Workplace preferences must be a list.";
   }
 
-  const allowedTypes = WORKPLACE_OPTIONS.map((option) => option.value);
+  const allowedTypes = WORKPLACE_OPTIONS.map(
+    (option) => option.value
+  );
+
   const selectedTypes = preferences.workplace_type;
 
   if (
-    selectedTypes.some((type) => !allowedTypes.includes(type))
+    selectedTypes.some(
+      (type) => !allowedTypes.includes(type)
+    )
   ) {
     return "Unsupported workplace preference found. Please review your saved settings.";
   }
 
-  if (new Set(selectedTypes).size !== selectedTypes.length) {
+  if (
+    new Set(selectedTypes).size !==
+    selectedTypes.length
+  ) {
     return "Duplicate workplace preferences are not allowed.";
   }
 
@@ -112,7 +148,10 @@ function validatePreferences(preferences) {
 }
 
 export default function SearchPreferencesForm() {
-  const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
+  const [preferences, setPreferences] = useState(
+    DEFAULT_PREFERENCES
+  );
+
   const [titleInput, setTitleInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -125,14 +164,19 @@ export default function SearchPreferencesForm() {
 
     async function loadPreferences() {
       try {
-        const response = await apiFetch("/api/preferences", {
-          signal: controller.signal,
-        });
+        const response = await apiFetch(
+          "/api/preferences",
+          {
+            signal: controller.signal,
+          }
+        );
 
         if (controller.signal.aborted) return;
 
         if (response.status === 401) {
-          throw new Error("Please log in to view your preferences.");
+          throw new Error(
+            "Please log in to view your preferences."
+          );
         }
 
         if (response.status === 404) {
@@ -145,7 +189,10 @@ export default function SearchPreferencesForm() {
 
         if (!response.ok) {
           throw new Error(
-            getErrorMessage(data, "Unable to load search preferences.")
+            getErrorMessage(
+              data,
+              "Unable to load search preferences."
+            )
           );
         }
 
@@ -154,7 +201,8 @@ export default function SearchPreferencesForm() {
           ...data,
         };
 
-        const validationError = validatePreferences(loaded);
+        const validationError =
+          validatePreferences(loaded);
 
         if (validationError) {
           throw new Error(validationError);
@@ -164,7 +212,8 @@ export default function SearchPreferencesForm() {
       } catch (err) {
         if (!controller.signal.aborted) {
           setError(
-            err.message || "Unable to load search preferences."
+            err.message ||
+              "Unable to load search preferences."
           );
         }
       } finally {
@@ -184,28 +233,47 @@ export default function SearchPreferencesForm() {
     setMessage("");
   }
 
-  function addEntry(field, input, setInput, label) {
+  function addEntry(
+    field,
+    input,
+    setInput,
+    label
+  ) {
     clearFeedback();
 
-    const normalized = input.trim().replace(/\s+/g, " ");
+    const normalized = input
+      .trim()
+      .replace(/\s+/g, " ");
 
-    if (!normalized || normalized.length > 255) {
-      setError(`${label} must contain 1 to 255 characters.`);
+    if (
+      !normalized ||
+      normalized.length > 255
+    ) {
+      setError(
+        `${label} must contain 1 to 255 characters.`
+      );
       return;
     }
 
     if (
       preferences[field].some(
-        (value) => value.toLowerCase() === normalized.toLowerCase()
+        (value) =>
+          value.toLowerCase() ===
+          normalized.toLowerCase()
       )
     ) {
-      setError(`This ${label.toLowerCase()} has already been added.`);
+      setError(
+        `This ${label.toLowerCase()} has already been added.`
+      );
       return;
     }
 
     setPreferences((current) => ({
       ...current,
-      [field]: [...current[field], normalized],
+      [field]: [
+        ...current[field],
+        normalized,
+      ],
     }));
 
     setInput("");
@@ -216,7 +284,9 @@ export default function SearchPreferencesForm() {
 
     setPreferences((current) => ({
       ...current,
-      [field]: current[field].filter((item) => item !== value),
+      [field]: current[field].filter(
+        (item) => item !== value
+      ),
     }));
   }
 
@@ -225,9 +295,15 @@ export default function SearchPreferencesForm() {
 
     setPreferences((current) => ({
       ...current,
-      workplace_type: current.workplace_type.includes(type)
-        ? current.workplace_type.filter((item) => item !== type)
-        : [...current.workplace_type, type],
+      workplace_type:
+        current.workplace_type.includes(type)
+          ? current.workplace_type.filter(
+              (item) => item !== type
+            )
+          : [
+              ...current.workplace_type,
+              type,
+            ],
     }));
   }
 
@@ -235,14 +311,18 @@ export default function SearchPreferencesForm() {
     event.preventDefault();
     clearFeedback();
 
-    if (titleInput.trim() || locationInput.trim()) {
+    if (
+      titleInput.trim() ||
+      locationInput.trim()
+    ) {
       setError(
         "Please add your entered job title or location before saving."
       );
       return;
     }
 
-    const validationError = validatePreferences(preferences);
+    const validationError =
+      validatePreferences(preferences);
 
     if (validationError) {
       setError(validationError);
@@ -252,29 +332,49 @@ export default function SearchPreferencesForm() {
     setSaving(true);
 
     try {
-      const response = await apiFetch("/api/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          job_titles: preferences.job_titles,
-          locations: preferences.locations,
-          workplace_type: preferences.workplace_type,
-          salary_min: preferences.salary_min,
-          salary_max: preferences.salary_max,
-          salary_currency: preferences.salary_currency,
-          result_count: preferences.result_count,
-        }),
-      });
+      const response = await apiFetch(
+        "/api/preferences",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            job_titles:
+              preferences.job_titles,
+            locations:
+              preferences.locations,
+            workplace_type:
+              preferences.workplace_type,
+            salary_min:
+              preferences.salary_min,
+            salary_max:
+              preferences.salary_max,
+            salary_currency:
+              preferences.salary_currency,
+            result_count:
+              preferences.result_count,
+          }),
+        }
+      );
 
-      const data = await response.json().catch(() => ({}));
+      const data = await response
+        .json()
+        .catch(() => ({}));
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error("Please log in to save your preferences.");
+          throw new Error(
+            "Please log in to save your preferences."
+          );
         }
 
         throw new Error(
-          getErrorMessage(data, "Unable to save search preferences.")
+          getErrorMessage(
+            data,
+            "Unable to save search preferences."
+          )
         );
       }
 
@@ -283,10 +383,13 @@ export default function SearchPreferencesForm() {
         ...data,
       });
 
-      setMessage("Your search preferences have been saved successfully.");
+      setMessage(
+        "Your search preferences have been saved successfully."
+      );
     } catch (err) {
       setError(
-        err.message || "Unable to save search preferences."
+        err.message ||
+          "Unable to save search preferences."
       );
     } finally {
       setSaving(false);
@@ -298,11 +401,14 @@ export default function SearchPreferencesForm() {
       <h2>Job Search Preferences</h2>
 
       <p className="profile-form-description">
-        Choose the jobs and work locations you are interested in.
+        Choose the jobs and work locations
+        you are interested in.
       </p>
 
       {loading ? (
-        <p role="status">Loading search preferences...</p>
+        <p role="status">
+          Loading search preferences...
+        </p>
       ) : (
         <form onSubmit={handleSave}>
           <div className="profile-form-field">
@@ -311,20 +417,30 @@ export default function SearchPreferencesForm() {
             </label>
 
             <div className="profile-skills-list">
-              {preferences.job_titles.map((title) => (
-                <span className="profile-skill-tag" key={title}>
-                  {title}
-
-                  <button
-                    type="button"
-                    onClick={() => removeEntry("job_titles", title)}
-                    aria-label={`Remove ${title}`}
-                    disabled={saving}
+              {preferences.job_titles.map(
+                (title) => (
+                  <span
+                    className="profile-skill-tag"
+                    key={title}
                   >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
+                    {title}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeEntry(
+                          "job_titles",
+                          title
+                        )
+                      }
+                      aria-label={`Remove ${title}`}
+                      disabled={saving}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                )
+              )}
             </div>
 
             <div className="profile-add-skill">
@@ -335,12 +451,17 @@ export default function SearchPreferencesForm() {
                 placeholder="e.g. Software Engineer"
                 disabled={saving}
                 onChange={(event) => {
-                  setTitleInput(event.target.value);
+                  setTitleInput(
+                    event.target.value
+                  );
                   clearFeedback();
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  if (
+                    event.key === "Enter"
+                  ) {
                     event.preventDefault();
+
                     addEntry(
                       "job_titles",
                       titleInput,
@@ -376,20 +497,30 @@ export default function SearchPreferencesForm() {
             </label>
 
             <div className="profile-skills-list">
-              {preferences.locations.map((location) => (
-                <span className="profile-skill-tag" key={location}>
-                  {location}
-
-                  <button
-                    type="button"
-                    onClick={() => removeEntry("locations", location)}
-                    aria-label={`Remove ${location}`}
-                    disabled={saving}
+              {preferences.locations.map(
+                (location) => (
+                  <span
+                    className="profile-skill-tag"
+                    key={location}
                   >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
+                    {location}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeEntry(
+                          "locations",
+                          location
+                        )
+                      }
+                      aria-label={`Remove ${location}`}
+                      disabled={saving}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                )
+              )}
             </div>
 
             <div className="profile-add-skill">
@@ -400,12 +531,17 @@ export default function SearchPreferencesForm() {
                 placeholder="e.g. Los Angeles, CA"
                 disabled={saving}
                 onChange={(event) => {
-                  setLocationInput(event.target.value);
+                  setLocationInput(
+                    event.target.value
+                  );
                   clearFeedback();
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  if (
+                    event.key === "Enter"
+                  ) {
                     event.preventDefault();
+
                     addEntry(
                       "locations",
                       locationInput,
@@ -436,39 +572,59 @@ export default function SearchPreferencesForm() {
           </div>
 
           <fieldset className="preference-workplace-fieldset">
-            <legend>Workplace Type</legend>
+            <legend>
+              Workplace Type
+            </legend>
 
             <p className="profile-field-hint">
-              Select all workplace types you are willing to consider.
-              Your choices will not be automatically expanded.
+              Select all workplace types
+              you are willing to consider.
+              Your choices will not be
+              automatically expanded.
             </p>
 
             <div className="preference-workplace-options">
-              {WORKPLACE_OPTIONS.map((option) => (
-                <label key={option.value}>
-                  <input
-                    type="checkbox"
-                    checked={preferences.workplace_type.includes(
-                      option.value
-                    )}
-                    disabled={saving}
-                    onChange={() => toggleWorkplace(option.value)}
-                  />
+              {WORKPLACE_OPTIONS.map(
+                (option) => (
+                  <label
+                    key={option.value}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={preferences.workplace_type.includes(
+                        option.value
+                      )}
+                      disabled={saving}
+                      onChange={() =>
+                        toggleWorkplace(
+                          option.value
+                        )
+                      }
+                    />
 
-                  <span>{option.label}</span>
-                </label>
-              ))}
+                    <span>
+                      {option.label}
+                    </span>
+                  </label>
+                )
+              )}
             </div>
           </fieldset>
 
           {error && (
-            <p className="profile-form-error" role="alert">
+            <p
+              className="profile-form-error"
+              role="alert"
+            >
               {error}
             </p>
           )}
 
           {message && (
-            <p className="profile-form-success" role="status">
+            <p
+              className="profile-form-success"
+              role="status"
+            >
               {message}
             </p>
           )}
@@ -479,7 +635,9 @@ export default function SearchPreferencesForm() {
             disabled={saving}
           >
             <Save size={17} />
-            {saving ? "Saving..." : "Save Preferences"}
+            {saving
+              ? "Saving..."
+              : "Save Preferences"}
           </button>
         </form>
       )}
