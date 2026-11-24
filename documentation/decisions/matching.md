@@ -9,11 +9,12 @@ The examples describe our judgments about fit. A qualification score of 80 means
 alignment with visible qualifications under these rules; it does **not** mean an 80%
 chance of being hired.
 
-**Status:** qualification-scoring rules adopted for the `exact-v1` baseline;
-preference filtering and related-skill policies remain proposals. The baseline adopts
+**Status:** qualification-scoring rules are implemented as `exact-v1` and JH-036
+implements the three directed mappings below as `related-v1`. Preference filtering
+remains a proposal. The baseline adopts
 the weights, unspecified priorities, normalization, duplicate handling, final rounding,
 and qualification-fit threshold described below. See the
-[implemented baseline](../JOB_MATCHING.md) for its interface, tests, and limitations.
+[scoring documentation](../JOB_MATCHING.md) for the interface, comparison results, and limitations.
 The repository's shared input fields and 0–100 score scale are unchanged. Public
 diagnostics remain internal evaluation concepts rather than additions to the API.
 
