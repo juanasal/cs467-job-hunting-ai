@@ -126,7 +126,7 @@ def _normalize_predicted_salary(value):
 
 
 def _normalize_salary(value):
-    """Convert finite salary values to numbers or None."""
+    """Convert finite, nonnegative salary values to numbers or None."""
     if isinstance(value, bool):
         return None
 
@@ -138,7 +138,7 @@ def _normalize_salary(value):
 
     if isinstance(value, (int, float)):
         try:
-            return value if math.isfinite(value) else None
+            return value if math.isfinite(value) and value >= 0 else None
         except (OverflowError, ValueError):
             return None
 
@@ -206,12 +206,13 @@ def _normalize_timestamp(value):
     return value
 
 
-def normalize_adzuna_job(job, retrieved_at=None):
+def normalize_adzuna_job(job, retrieved_at=None, *, salary_unit=None, salary_currency=None):
     """Convert one raw Adzuna job into a pre-insert Job Posting record.
 
     The database-generated job_id is intentionally omitted and is assigned
     when the normalized record is saved to the database. Return None when
-    the record is missing fields required to make it usable.
+    the record is missing fields required to make it usable. Salary metadata
+    must come from verified source evidence supplied by the caller.
     """
     if not isinstance(job, dict):
         return None
@@ -259,6 +260,22 @@ def normalize_adzuna_job(job, retrieved_at=None):
             )
             return None
 
+    salary_min = salary_max = None
+    if (
+        salary_unit == "annual"
+        and isinstance(salary_currency, str)
+        and len(salary_currency) == 3
+        and salary_currency.isascii()
+        and salary_currency.isalpha()
+        and salary_currency.isupper()
+    ):
+        salary_min = _normalize_salary(job.get("salary_min"))
+        salary_max = _normalize_salary(job.get("salary_max"))
+        if salary_min is not None and salary_max is not None and salary_min > salary_max:
+            salary_min = salary_max = None
+    if salary_min is None and salary_max is None:
+        salary_currency = None
+
     return {
         "external_job_id": external_job_id,
         "source": "adzuna",
@@ -266,9 +283,9 @@ def normalize_adzuna_job(job, retrieved_at=None):
         "company": _nested_display_name(job, "company"),
         "location": _nested_display_name(job, "location"),
         "workplace_type": _detect_workplace_type(job),
-        "salary_min": _normalize_salary(job.get("salary_min")),
-        "salary_max": _normalize_salary(job.get("salary_max")),
-        "salary_currency": None,
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "salary_currency": salary_currency,
         "salary_is_predicted": _normalize_predicted_salary(
             job.get("salary_is_predicted")
         ),

@@ -58,7 +58,7 @@ More details about the Adzuna API and our findings are documented in [`documenta
 
 The normalizer:
 - validates required fields and skips unusable records;
-- converts salary values to numbers or `null`;
+- retains salary bounds only with verified annual units and currency;
 - validates job URLs and retrieval timestamps;
 - normalizes posting dates and predicted salary values;
 - conservatively infers `remote`, `hybrid`, or `onsite` when the listing provides clear evidence, and otherwise uses `unknown`.
@@ -235,6 +235,7 @@ Expect `3306/tcp -> 127.0.0.1:3307`. If the mapping differs or is missing, see [
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_add_match_results_recalculation_flag.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/004_add_strict_preferences.sql
 ```
 
 Migration `003_add_match_results_recalculation_flag.sql` is introduced by JH-017; these instructions assume that change has been merged. After pulling changes, also apply any later migrations present in `db/migrations/`, in numerical order. Do not reapply migrations already run against this database. No seed data is required for the tests.

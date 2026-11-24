@@ -21,11 +21,20 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migration
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_add_jobs_first_seen_at.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_create_tables.sql
 
-# 2. (Optional) Load the example data
+# 2. Apply the recalculation migration, then the strict preference migration
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_add_match_results_recalculation_flag.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/004_add_strict_preferences.sql
+
+# 3. (Optional) Load the example data
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
 ```
 
 For Aiven, also add `--ssl-mode=REQUIRED`. In MySQL Workbench, select the target schema and run each migration in the same order.
+
+Migration `004_add_strict_preferences.sql` defaults the three strict flags to
+false for existing searches. It also clears legacy Adzuna salary bounds and
+currency because the prior importer did not verify units, and marks affected
+matches for recalculation. Apply it before deploying the updated preferences API.
 
 The session migration uses `CREATE TABLE IF NOT EXISTS`. This makes it safe to run on a development database where `user_sessions` was already created by the earlier `002_create_sessions.sql` migration. If the table already exists, MySQL leaves it unchanged. Do not rerun migrations `001` or `002` against an existing database; migrations are intended to run once, in order.
 
