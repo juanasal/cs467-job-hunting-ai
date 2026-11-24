@@ -7,7 +7,9 @@ backend/db/
 ├── migrations/
 │   ├── 001_create_tables.sql
 │   ├── 002_add_jobs_first_seen_at.sql
-│   └── 003_create_user_sessions.sql
+│   ├── 003_add_match_results_recalculation_flag.sql
+│   ├── 003_create_user_sessions.sql
+│   └── 004_add_strict_preferences.sql
 └── seed/
     └── dev_seed.sql
 ```
@@ -19,13 +21,11 @@ Run from the repository root. The commands prompt for the database password.
 ```bash
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/001_create_tables.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_add_jobs_first_seen_at.sql
-mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/002_create_tables.sql
-
-# 2. Apply the recalculation migration, then the strict preference migration
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_add_match_results_recalculation_flag.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_create_user_sessions.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/004_add_strict_preferences.sql
 
-# 3. (Optional) Load the example data
+# 2. (Optional) Load the example data
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
 ```
 
@@ -61,7 +61,7 @@ Never load `dev_seed.sql` into a database containing real users.
 | `users` | `user_id` | Login email, password hash, creation time |
 | `user_profiles` | `user_id` | Education and experience level |
 | `user_skills` | `user_id`, `skill` | Profile skills |
-| `search_preferences` | `user_id` | Salary range, currency, result count |
+| `search_preferences` | `user_id` | Salary range, currency, result count, and strictness flags for location, workplace, and salary |
 | `preference_job_titles` | `user_id`, `job_title` | Desired job titles |
 | `preference_locations` | `user_id`, `location` | Preferred locations |
 | `preference_workplace_types` | `user_id`, `workplace_type` | Acceptable workplace arrangements |
@@ -98,7 +98,7 @@ Deleting a user deletes all of their rows in the other tables, including their a
 - `DATETIME` timestamps are stored in UTC.
 - Missing optional values are `NULL`, not empty strings, zero, or `N/A`.
 - Enumerated fields are enforced by MySQL `ENUM` columns.
-- Salaries are annual `DECIMAL(12,2)` values with currency stored separately.
+- Salaries are annual `DECIMAL(12,2)` values with currency stored separately. Job salary bounds require verified annual units and currency at ingestion.
 - List fields in the data contract are stored as one row per item and combined by the API.
 
 ## Known limitations

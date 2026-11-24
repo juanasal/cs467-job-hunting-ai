@@ -10,13 +10,13 @@ alignment with visible qualifications under these rules; it does **not** mean an
 chance of being hired.
 
 **Status:** qualification-scoring rules are implemented as `exact-v1` and JH-036
-implements the three directed mappings below as `related-v1`. Preference filtering
-remains a proposal. The baseline adopts
+implements the three directed mappings below as `related-v1`. JH-037 adds
+preference evaluation with saved strictness flags. The baseline adopts
 the weights, unspecified priorities, normalization, duplicate handling, final rounding,
 and qualification-fit threshold described below. See the
 [scoring documentation](../JOB_MATCHING.md) for the interface, comparison results, and limitations.
-The repository's shared input fields and 0–100 score scale are unchanged. Public
-diagnostics remain internal evaluation concepts rather than additions to the API.
+The preferences API exposes the strictness flags. The 0–100 score scale is unchanged,
+and evaluation diagnostics are internal to the backend.
 
 ## Section index
 
@@ -115,16 +115,15 @@ the established API contract.
 
 ## Hard filters
 
-A **strict preference** is a must-have: a known violation excludes the job before
-scoring. A **soft preference** does not exclude it. In this first proposal, soft
-mismatches appear in the explanation but do not change the score. Qualifications improve
+A **strict preference** is a must-have. A known violation excludes the job from scored
+results. Soft mismatches appear in the internal preference statuses and leave the score
+unchanged. Qualifications improve
 the score; even a missing required qualification is not an automatic exclusion, given
 the limitations of snippets and requirement extraction.
 
-The current contract does not distinguish strict and soft preferences. This design
-proposes an explicit choice for location, workplace, and salary, with all three soft by
-default. The examples choose strict preferences unless stated otherwise. The team must
-agree how to represent those choices before implementation.
+Saved preferences expose `strict_location`, `strict_workplace`, and `strict_salary`.
+All three default to `false`. The examples explicitly enable strict preferences unless
+stated otherwise.
 
 ### Known violations and unknown information
 
@@ -156,7 +155,7 @@ happens to match a preferred city. For `unknown` workplace type, a listed city a
 cannot establish attendance or remote eligibility; location stays unverified unless
 explicit evidence resolves it.
 
-Proposed restriction extraction recognizes only explicit, simple statements such as
+Restriction extraction recognizes explicit statements in the form
 “Workers must reside in Seattle, WA,” retaining that exact text. A restriction is
 compatible if it explicitly permits at least one preferred location, and incompatible if
 it clearly rules out all of them. Ambiguous or broad restrictions without an agreed
@@ -195,8 +194,9 @@ $80,000: compatibility is unverified.
 
 Overlap means an acceptable offer is possible, not guaranteed. The MVP performs no
 currency or hourly-to-annual conversion. Raw hourly values must be withheld from annual
-fields, leaving salary endpoints `null` until a conversion policy exists. The contract
-has no explicit salary-unit provenance field yet.
+fields. Ingestion populates those fields only with verified annual units and currency.
+The current Adzuna search feed leaves salary endpoints null because its annual units
+are unverified.
 
 ### Incomplete records
 
@@ -356,7 +356,7 @@ requirements from the starting description do not carry over.
 | --- | --- |
 | Profile | `user_id: 1`, `skills: ["Python", "SQL"]`, `education_level: "bachelor"`, `experience_level: "mid"` |
 | Preferences | `user_id: 1`, `job_titles: ["Software Engineer"]`, `locations: ["Portland, OR"]`, `workplace_type: ["hybrid"]`, `salary_min: 80000`, `salary_max: null`, `salary_currency: "USD"`, `result_count: 20` |
-| Strict choices | Location, workplace, and salary are all strict. These are proposed choices outside the current contract. |
+| Strict choices | `strict_location: true`, `strict_workplace: true`, `strict_salary: true` |
 | Job | `title: "Software Engineer"`, `location: "Portland, OR"`, `workplace_type: "hybrid"`, `salary_min: 90000`, `salary_max: 110000`, `salary_currency: "USD"`, `salary_is_predicted: false` |
 | Job description | `"Required: Python; SQL. Bachelor degree required. Mid experience required."` |
 
@@ -404,7 +404,7 @@ Checks apply to both methods unless specified.
 | **MATCH-017** — Directionality negative control | **Profile:** `skills: ["UI development"]`; other defaults. **Job:** `title: "React Developer"`, `description: "Required: React."`. **Preferences:** defaults; strict defaults. | **included; Baseline weak 0; Related weak 0.** reverse edge is not approved. Check: no UI development → React credit; S=E=X=0 in both versions. |
 | **MATCH-018** — Incompatible currency | **Profile:** defaults. Job: `salary_min: 50000`, `salary_max: 60000`, `salary_currency: "EUR"`. **Preferences:** defaults; strict defaults. | **included; Baseline good 100; Related good 100.** numeric values cannot be compared as annual USD. Check: `salary_unverified`; no conversion, strict salary exclusion, or claim the USD minimum is met. |
 | **MATCH-019** — Predicted low salary | **Profile:** defaults. Job: `salary_min: 60000`, `salary_max: 70000`, `salary_is_predicted: true`. **Preferences:** defaults; strict defaults. | **included; Baseline good 100; Related good 100.** predicted values cannot establish a strict violation. Check: `salary_unverified` and prediction disclosed; do not exclude or present values as employer-provided. |
-| **MATCH-020** — Soft preferences | **Profile:** defaults. Job: `location: "Seattle, WA"`, `workplace_type: "onsite"`, `salary_min: 60000`, `salary_max: 70000`. **Preferences:** defaults, but `strict: {location: false, workplace: false, salary: false}`. | **included; Baseline good 100; Related good 100.** **Location, workplace, and salary incompatible (soft).** All known preference mismatches are soft; baseline awards qualification points only. Check: three mismatch warnings; no exclusions or preference points; explanation discloses preference mismatch despite good qualification fit; never label this fully compatible. |
+| **MATCH-020** — Soft preferences | **Profile:** defaults. Job: `location: "Seattle, WA"`, `workplace_type: "onsite"`, `salary_min: 60000`, `salary_max: 70000`. **Preferences:** defaults, with all three strict flags set to `false`. | **included; Baseline good 100; Related good 100.** Location, workplace, and salary are each reported as incompatible. The job remains eligible and earns qualification points. |
 
 ### Remote eligibility and partial salaries
 
@@ -452,16 +452,15 @@ The same examples also provide a few useful boundary checks:
 ## How the team can use these examples
 
 The workflow starts with input validation, then separates four responsibilities. These
-describe how the workflow is organized. Rule-based qualification extraction, explicit
-requirement preparation, and exact-match qualification scoring are implemented in the
-[matching guide](../JOB_MATCHING.md). Worker restrictions, preference evaluation,
-recommendation assembly, and ranking remain future work. These interfaces do not change the API:
+describe how the workflow is organized. The [matching guide](../JOB_MATCHING.md)
+documents the implemented extraction, scoring, and preference evaluation interfaces.
+Recommendation assembly and ranking remain future work.
 
 | Component | Inputs | Outputs |
 | --- | --- | --- |
-| Requirement extraction | A validated job description | Skill targets and education/experience minima, priorities, exact supporting text, and ambiguity/partial-description warnings. A separate proposed output holds explicit worker-location restrictions and their evidence. |
+| Requirement extraction | A validated job description | Skill targets and education/experience minima, priorities, exact supporting text, and ambiguity/partial-description warnings. |
 | Qualification scoring | Validated profile, extracted qualification targets, and method version | S/E/X, component points, rounded qualification score, matched profile skills, and contributing reasons. It does not decide preference compatibility. |
-| Preference evaluation | Validated preferences, proposed strict choices, job location/workplace/salary, unit provenance, and extracted worker restrictions | Per-preference compatibility, evidence/warnings, and included or excluded with reasons. It does not award qualification points. |
+| Preference evaluation | Saved preferences with strict flags, normalized job fields, job description, and a prepared qualification record | Per-preference statuses, explicit worker-location evidence, and eligibility with exclusion reasons. Eligible results include qualification diagnostics. |
 | Recommendation assembly and ranking | Qualification results and preference decisions for valid records | Included results ordered by score then job ID, concise explanations that preserve incompatibility/uncertainty, and up to `result_count` results. Excluded and rejected records do not create persisted recommendations. |
 
 Baseline scoring tests can supply hand-authored extracted requirements directly, so a
@@ -495,8 +494,8 @@ fairness.
 
 | Decision | Why it matters |
 | --- | --- |
-| Strict versus soft choices and unknown-inclusive filtering | The contract has no strictness fields. The proposed policy can include jobs with unverified must-haves; the team may prefer a separate verified-only option. |
-| Salary overlap, maximum limits, and predicted pay | Overlap permits an offer below the user's minimum. Predicted ranges never exclude; reliable partial ranges can establish violations. Unit provenance also needs a representation. |
+| Verified-only filtering | JH-037 keeps jobs with unverified strict preferences eligible. A separate verified-only option remains open. |
+| Salary overlap and future conversions | Overlap means an acceptable offer is possible. Ingestion currently requires verified annual units and currency. Hourly and currency conversion policies remain open. |
 | Weights, threshold, and missing-evidence treatment | The proposed 80/10/10 split and 60-point threshold are judgments. Fixed weights can disadvantage incomplete descriptions; soft preferences currently earn no points. |
 | Requirement extraction and normalization | Structured qualifications, unspecified-priority weights, worker-location restrictions, aliases, geographic equivalences, and years-to-level mappings need agreement. |
 | Related-skill evaluation | `related-v1` implements the three documented directions at 0.75 credit. The fit threshold and transfer credit remain heuristics for future evaluation. |
@@ -516,10 +515,10 @@ A case numbered N uses `job_id = 1000 + N`. Its other job fields are `external_j
 `first_seen_at` both set to `"2026-11-10T18:00:00Z"`. NNN is the three-digit case
 number.
 
-The proposed test-only strictness representation is:
+The examples enable the saved strictness flags:
 
 ```json
-{"strict": {"location": true, "workplace": true, "salary": true}}
+{"strict_location": true, "strict_workplace": true, "strict_salary": true}
 ```
 
 Unknown optional fields retain the contract's `null` convention; unknown job workplace

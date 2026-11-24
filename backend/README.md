@@ -206,7 +206,7 @@ If `docker` is not found, finish installation and reopen your terminal. If it ca
 
 Complete the Python setup above and activate your virtual environment first. The commands below use Bash or Zsh (macOS/Linux; on Windows use a WSL Bash terminal with Docker Desktop integration enabled). Run them from `backend/`.
 
-Start a throwaway MySQL instance in Docker, apply all three migrations in numerical order, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
+Start a throwaway MySQL instance in Docker, apply the migrations in the order shown below, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
@@ -235,6 +235,7 @@ Expect `3306/tcp -> 127.0.0.1:3307`. If the mapping differs or is missing, see [
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_add_match_results_recalculation_flag.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_create_user_sessions.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/004_add_strict_preferences.sql
 ```
 
@@ -344,7 +345,7 @@ Use `jh-test-mysql-3308` in every readiness, migration, start, stop, and port co
 docker exec jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test -e "SHOW TABLES; SHOW COLUMNS FROM jobs;"
 ```
 
-For the migrations currently listed above, `user_sessions` is added by `002_create_tables.sql` and `jobs.first_seen_at` by `002_add_jobs_first_seen_at.sql`. Compare the schema with each migration and apply only missing changes. If uncertain, create a separate fresh test container rather than deleting existing data.
+The `003_create_user_sessions.sql` migration creates `user_sessions`, and `002_add_jobs_first_seen_at.sql` adds `jobs.first_seen_at`. Compare the schema with each migration and apply only missing changes. If uncertain, create a separate fresh test container to preserve existing data.
 
 **`No module named fastapi` (or another dependency):** Activate the virtual environment and install the requirements with its Python:
 
