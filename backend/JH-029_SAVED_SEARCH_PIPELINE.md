@@ -25,7 +25,7 @@ duplicate job records.
 |---|---|---|
 | job_titles | what | One query per title/location combination |
 | locations | where | Optional; omitted when no location is saved |
-| result_count | results_per_page | Controls collection size, subject to limits |
+| result_count | N/A | Limits the total number of jobs collected, up to 100. Each Adzuna request uses a fixed `results_per_page=20`. |
 
 ## Filters Not Sent to Adzuna
 
@@ -64,8 +64,8 @@ guarantee that Adzuna will return that many usable jobs.
 
 - Missing saved preferences produce `SavedSearchError`.
 - Missing job titles produce `SavedSearchError`.
-- Invalid Adzuna credentials produce `AdzunaConfigError`.
-- Failed Adzuna requests produce `AdzunaRequestError`.
+- Missing or blank Adzuna credentials produce `AdzunaConfigError`.
+- Credentials rejected by Adzuna, or other failed Adzuna requests, produce `AdzunaRequestError`.
 - Invalid or incomplete job records are skipped.
 - Database failures trigger a transaction rollback.
 
@@ -90,6 +90,10 @@ environment variables:
 
 - ADZUNA_APP_ID
 - ADZUNA_APP_KEY
+
+Saving search preferences does not automatically trigger job
+collection. The pipeline runs only when backend code explicitly
+calls `run_saved_search(user_id)`.
 
 This module does not introduce a public API endpoint or
 automatic scheduled collection. Integration with the
