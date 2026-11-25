@@ -11,12 +11,13 @@ The app uses three separate hosts. Each has its own account and settings.
 
 | Part | Host | What it runs | Notes |
 | --- | --- | --- | --- |
-| Frontend | **Vercel** | The React + Vite app in `frontend/my-react-app/` | Static files only. It calls the backend over HTTPS. |
+| Frontend | **Vercel** | The React + Vite app in `frontend/my-react-app/` | Serves the app and forwards browser requests under `/api/` to Render over HTTPS. |
 | Backend API | **Render** (this decision) | The FastAPI app in `backend/` | Reads settings from Render environment variables and connects out to Aiven. |
 | Database | **Aiven** | MySQL | Requires SSL. The backend proves it reached the real server using Aiven's `ca.pem`. |
 | Job data | Adzuna API | External job listings | Called by the backend or pipeline, never by the browser, so the API key stays secret. |
 
-Changing one host doesn't change the others. For example, moving the backend off Render only changes the backend URL that the frontend calls.
+If the backend moves, update the destination of the Vercel API rewrite. Browser
+requests continue to use relative `/api/` paths.
 
 ## Options compared
 
@@ -98,6 +99,8 @@ On the service's **Environment** page:
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | From the Aiven console (service **Overview → Connection information**) |
 | `DB_SSL_CA` | `/etc/secrets/ca.pem` |
 | `PYTHON_VERSION` | `3.13.5` (CI tests on 3.13. Render's default for new services is 3.14, which we don't test on.) |
+| `APP_ENV` | `production` to enable production authentication cookie settings |
+| `FRONTEND_ORIGINS` | Browser-facing Vercel origin, such as `https://your-app.vercel.app` |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Only once the deployed backend calls Adzuna |
 
 Then, under **Secret Files**, click **+ Add Secret File** and name it `ca.pem`. Paste in the contents of the `ca.pem` downloaded from the Aiven console. Render makes it available at `/etc/secrets/ca.pem`.
@@ -134,7 +137,7 @@ That choice belongs to the pipeline ticket, not this one. Adzuna's rate limits a
 ## Known limitations and follow-up
 
 - **Cold starts:** the first request after 15 idle minutes takes about 1 minute. The frontend should show a loading state, not treat the slow response as a failure.
-- **CORS:** the backend doesn't allow cross-origin requests yet. Before the Vercel frontend can call the Render backend, a ticket needs to add FastAPI's CORS middleware that allows the Vercel domain.
+- **Browser API requests:** Production uses the Vercel rewrite for same-origin requests. FastAPI also configures CORS for explicitly allowed origins and uses `FRONTEND_ORIGINS` for trusted Origin checks. See the [authentication decision](authentication.md).
 - **Team access:** see the open question above.
 
 ## Sources

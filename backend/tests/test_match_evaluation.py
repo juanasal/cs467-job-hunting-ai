@@ -4,11 +4,102 @@ import pytest
 
 from app.job_matching import prepare_requirements
 from app.job_requirements import extract_requirements
-from app.match_evaluation import evaluate_match
+from app.match_evaluation import evaluate_match, recommend_jobs
 from app.search_preferences import SearchPreferencesData, SearchPreferencesResponse, preferences_changed
 
 
 STRICT = {"strict_location": True, "strict_workplace": True, "strict_salary": True}
+
+
+@pytest.fixture
+def recommendation_inputs():
+    profile = {
+        "user_id": 1,
+        "skills": ["Python", "PostgreSQL"],
+        "education_level": "bachelor",
+        "experience_level": "mid",
+    }
+    preferences = SearchPreferencesResponse(
+        user_id=1, job_titles=["Software Engineer"], locations=["Portland, OR"],
+        workplace_type=["hybrid"], salary_min=80000,
+    )
+    return profile, preferences
+
+
+def test_recommendations_sort_by_final_score_then_job_id_and_apply_limit(recommendation_inputs):
+    profile, preferences = recommendation_inputs
+    jobs = [
+        {"job_id": 1, "description": "Required: Docker."},
+        {"job_id": 4, "description": "Required: Python."},
+        {"job_id": 3, "description": "Required: PostgreSQL."},
+        {"job_id": 2, "description": "Required: SQL."},
+        {"job_id": 5, "description": "Required: Python. Bachelor degree required.",
+         "workplace_type": "onsite"},
+    ]
+    results = recommend_jobs(profile, jobs, preferences)
+    assert [(row["job_id"], row["match_score"]) for row in results] == [
+        (5, 90), (3, 80), (4, 80), (2, 60), (1, 0),
+    ]
+    assert recommend_jobs(profile, jobs, preferences) == results
+    assert recommend_jobs(profile, reversed(jobs), preferences) == results
+    assert recommend_jobs(profile, jobs, preferences.model_copy(update={"result_count": 2})) == results[:2]
+    strict = preferences.model_copy(update={"strict_workplace": True, "result_count": 1})
+    assert recommend_jobs(profile, jobs, strict) == results[1:2]
+
+
+def test_recommendation_explanation_reflects_scoring_evidence(recommendation_inputs):
+    profile, preferences = recommendation_inputs
+    job = {
+        "job_id": 1,
+        "description": "Required: Python, SQL and Docker. Bachelor degree required. "
+                       "Senior experience required. Additional qualifications…",
+        "location": "Portland, OR",
+        "workplace_type": "onsite",
+    }
+    assert recommend_jobs(profile, [job], preferences) == [{
+        "user_id": 1,
+        "job_id": 1,
+        "match_score": 57,
+        "matched_skills": ["PostgreSQL", "Python"],
+        "match_explanation": (
+            "Direct skill matches include Python. "
+            "Related skill matches include PostgreSQL for sql (partial credit). "
+            "No matching profile skill was found for docker (required priority). "
+            "Your recorded education meets the job's stated level. "
+            "Your recorded experience is below the job's stated level. "
+            "Location matches your preference. "
+            "Workplace type differs from your preference. "
+            "Salary could not be verified against your preference. "
+            "The job description appears incomplete."
+        ),
+    }]
+
+
+def test_recommendations_handle_incomplete_candidates_and_profiles(recommendation_inputs):
+    profile, preferences = recommendation_inputs
+    job = {"job_id": 3, "description": "Join our team."}
+    jobs = [{"job_id": 1}, {"job_id": 2, "description": " "},
+            {"description": "Required: Python."}, job]
+    assert recommend_jobs(profile, [], preferences) == []
+    assert recommend_jobs(profile, jobs[:-1], preferences) == []
+    assert recommend_jobs(None, jobs, preferences) == []
+    assert recommend_jobs(profile, jobs, None) == []
+    for field in ("skills", "education_level", "experience_level"):
+        incomplete = {key: value for key, value in profile.items() if key != field}
+        assert recommend_jobs(incomplete, jobs, preferences) == []
+
+    result, = recommend_jobs(profile, jobs, preferences)
+    assert result["job_id"] == 3
+    assert result["match_score"] == 0
+    assert result["matched_skills"] == []
+    assert result["match_explanation"] == (
+        "Job skill requirements could not be determined from the posting. "
+        "Education fit could not be determined from the available information. "
+        "Experience fit could not be determined from the available information. "
+        "Location could not be verified against your preference. "
+        "Workplace type could not be verified against your preference. "
+        "Salary could not be verified against your preference."
+    )
 
 
 @pytest.fixture

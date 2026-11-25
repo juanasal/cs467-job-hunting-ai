@@ -37,10 +37,10 @@ into Adzuna API parameters:
 - salary_max
 - salary_currency
 
-These preferences remain saved in MySQL for future local
-filtering and matching.
-
-No local filtering is performed by this module.
+The local [matching stage](../documentation/JOB_MATCHING.md#ranking-and-explaining-recommendations)
+uses these saved preferences and their strictness flags to evaluate eligibility
+and explain compatibility. This collection module uses title and location to
+build Adzuna queries.
 
 ## Query Limits
 
@@ -57,8 +57,12 @@ No local filtering is performed by this module.
 The limits are application-level safeguards, not Adzuna's
 official API quotas.
 
-The requested result count is a collection limit, not a
-guarantee that Adzuna will return that many usable jobs.
+Collection stops after gathering up to the saved `result_count`, capped at 100.
+The ranker separately applies `result_count` after scoring and sorting the
+candidates passed to it. When ranking uses only the candidates from a collection
+run, postings beyond that run's collection limit are outside the ranked pool.
+The number of recommendations can be lower than requested if there are fewer
+usable or eligible candidates.
 
 ## Error Handling
 
@@ -96,8 +100,9 @@ collection. The pipeline runs only when backend code explicitly
 calls `run_saved_search(user_id)`.
 
 This module does not introduce a public API endpoint or
-automatic scheduled collection. Integration with the
-recommendation workflow can call `run_saved_search()` later.
+automatic scheduled collection. `run_saved_search()` returns collection
+statistics. The backend ranker is a separate function that takes persisted job
+records as input.
 
 ## Testing
 

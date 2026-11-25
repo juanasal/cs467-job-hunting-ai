@@ -28,7 +28,7 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 | `DB_PASSWORD` | Yes | Application database password |
 | `DB_SSL_CA` | For Aiven | Path to the server's CA certificate (`ca.pem` from the Aiven console). Turns on SSL. |
 | `TEST_DB_*` | For DB tests | Separate test database used by database integration tests and `tests/test_job_repository.py` (see [Run the tests](#run-the-tests)) |
-| `FRONTEND_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Defaults to `http://localhost:3000`. |
+| `FRONTEND_ORIGINS` | No | Comma-separated frontend origins trusted by CORS and Origin validation. Defaults to `http://localhost:3000`. For local Vite use, add the exact origin printed by Vite, usually `http://localhost:5173`. |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | For Adzuna client | Adzuna API credentials |
 
 The server requires valid `DB_*` settings at startup. Authentication routes also use these application database settings. `TEST_DB_*` settings are separate and are only used by database integration tests.
@@ -71,13 +71,17 @@ Run the normalizer tests from the `backend/` directory:
 python -m pytest tests/test_job_normalizer.py
 ```
 
-## Qualification scoring
+## Job matching and recommendations
 
 `app/job_requirements.py` extracts qualifications from job descriptions.
 `app/job_matching.py` scores prepared requirements using `related-v1` by default.
 Pass `method_version="exact-v1"` to select the exact-match baseline.
+`app/match_evaluation.py` evaluates saved preferences and exposes
+`recommend_jobs(profile, jobs, preferences)` for ranked recommendations with
+evidence-based explanations. It accepts normalized, persisted job records and
+applies the saved result limit after sorting.
 See [usage, rules, and comparison results](../documentation/JOB_MATCHING.md).
-Run `python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q` from `backend/`.
+Run `python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q` from `backend/`.
 
 ## Database setup
 
