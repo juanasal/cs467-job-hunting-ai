@@ -116,6 +116,15 @@ def test_unknown_workplace_leaves_location_and_workplace_unverified(match):
     }
 
 
+def test_empty_locations_are_unconstrained_even_when_strict(match):
+    result = match(job_fields={"location": "Seattle, WA"},
+                   preference_fields={"locations": []})
+    assert result["eligible"] is True
+    assert result["preference_statuses"]["location"] == "not_constrained"
+    assert result["exclusion_reasons"] == []
+    assert result["qualification"]["match_score"] == 100
+
+
 def test_remote_requires_explicit_worker_location_evidence(match):
     remote = {"workplace_type": "remote", "location": "Seattle, WA"}
     preferences = {"workplace_type": ["remote"]}

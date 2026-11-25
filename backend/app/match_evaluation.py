@@ -91,8 +91,8 @@ def evaluate_match(profile, job, preferences, *, requirements):
     qualification = score_job(profile, job, requirements=requirements)
     if qualification["user_id"] != preferences.user_id:
         raise ValueError("profile and preferences must belong to the same user")
-    if not preferences.job_titles or not preferences.locations:
-        raise ValueError("job titles and locations must be nonempty for matching")
+    if not preferences.job_titles:
+        raise ValueError("job titles must be nonempty for matching")
 
     location, location_evidence = _location(job, preferences.locations)
     workplace = job.get("workplace_type")

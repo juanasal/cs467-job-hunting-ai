@@ -125,6 +125,9 @@ Saved preferences expose `strict_location`, `strict_workplace`, and `strict_sala
 All three default to `false`. The examples explicitly enable strict preferences unless
 stated otherwise.
 
+An empty saved location list leaves location unconstrained, even when
+`strict_location` is enabled.
+
 ### Known violations and unknown information
 
 | Situation | Proposed result |
@@ -200,9 +203,9 @@ are unverified.
 
 ### Incomplete records
 
-Validation comes first. Missing required profile fields, empty skills/title/ location
-lists under the database guidance, and a missing required job description are rejected
-inputs. They receive no inclusion/exclusion decision, qualification fit label, or
+Validation comes first. Missing required profile fields, empty skills or job title
+lists, and a missing required job description are rejected inputs. They receive no
+inclusion/exclusion decision, qualification fit label, or
 recommendation score, and cannot create a stored recommendation. MATCH-012 and MATCH-014
 test this validation boundary.
 
