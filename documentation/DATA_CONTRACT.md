@@ -427,7 +427,10 @@ Match Result
 ```
 
 Ranked recommendations are currently available through the backend matching
-function. The frontend Explore view currently uses sample postings. Job
+function. Saved match results and job details are returned by
+`GET /api/recommendations` and `GET /api/jobs/{job_id}` (see the
+[backend README](../backend/README.md#recommendations-and-job-details-api)).
+The frontend Explore view currently uses sample postings. Job
 Tracking defines the saved, dismissed, and applied statuses for persisted jobs.
 
 ---
