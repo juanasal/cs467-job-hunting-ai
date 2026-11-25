@@ -22,7 +22,7 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 | Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
 | Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
-| Recommendations | Rule-based requirement extraction and deterministic `exact-v1` and `related-v1` qualification scoring | Extend `backend/tests/test_job_requirements.py` or `backend/tests/test_job_matching.py` for the behavior under test |
+| Recommendations | Rule-based extraction, deterministic qualification scoring, preference evaluation, ranking, and explanations | Extend `test_job_requirements.py`, `test_job_matching.py`, or `test_match_evaluation.py` under `backend/tests/` |
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
@@ -158,6 +158,10 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 `backend/tests/test_match_evaluation.py` checks strict exclusions, soft mismatches, unverified preferences, incomplete profiles, and score bounds and component totals. `backend/tests/test_job_normalizer.py` covers withholding salary without verified annual units and currency. `backend/tests/test_search_preferences.py` uses MySQL to verify that each strict flag persists through PUT and GET and that changing a flag marks only the current user's matches for recalculation. Apply migration `004_add_strict_preferences.sql` before running the preferences integration tests.
 
+The recommendation tests in `test_match_evaluation.py` also check descending
+scores, stable job-ID tie-breaking, result limits after sorting, repeated
+results, evidence-based explanations, and empty or incomplete inputs.
+
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.
 - Cover missing job data, empty skills, duplicate skills, and case normalization where supported.
@@ -185,7 +189,7 @@ While developing, run a specific file or test:
 python -m pytest tests/test_adzuna_client.py
 python -m pytest tests/test_main.py::test_health_returns_ok
 python -m pytest tests/test_job_normalizer.py
-python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q
+python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q
 python -m pytest tests/test_job_repository.py -v
 ```
 

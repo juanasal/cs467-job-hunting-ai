@@ -227,9 +227,9 @@ Stores the result of comparing a user profile and preferences with a job posting
 |---|---|---:|---|---|
 | `user_id` | integer | Yes | Existing user ID | User receiving the recommendation |
 | `job_id` | integer | Yes | Existing job ID | Job being evaluated |
-| `match_score` | number | Yes | `0–100` | Overall relevance score |
-| `matched_skills` | array of strings | Yes | — | User skills that align with the posting |
-| `match_explanation` | string | Yes | — | Short explanation of why the job matches |
+| `match_score` | number | Yes | `0–100` | Qualification score based on the available job and profile evidence |
+| `matched_skills` | array of strings | Yes | — | Profile skills credited for direct or related matches |
+| `match_explanation` | string | Yes | — | Summary of qualification evidence, preference compatibility, and relevant unknowns |
 | `created_at` | datetime | Yes | ISO 8601 | When the score was generated |
 
 ### Example
@@ -238,12 +238,12 @@ Stores the result of comparing a user profile and preferences with a job posting
 {
   "user_id": 1,
   "job_id": 1001,
-  "match_score": 86,
+  "match_score": 80,
   "matched_skills": [
     "Python",
     "SQL"
   ],
-  "match_explanation": "Strong skill alignment and the position matches the user's preferred experience level and location.",
+  "match_explanation": "Direct skill matches include Python, SQL. Education fit could not be determined from the available information. Experience fit could not be determined from the available information. Location matches your preference.",
   "created_at": "2026-10-19T18:35:00Z"
 }
 ```
@@ -253,7 +253,10 @@ Stores the result of comparing a user profile and preferences with a job posting
 - `0` = no meaningful match
 - `100` = strongest possible match
 
-The exact scoring algorithm may change during development, but the API should continue returning scores on the same `0–100` scale.
+Preferences determine eligibility and contribute to the explanation. Ranking
+uses the qualification score and breaks ties by ascending job ID. The backend
+ranker returns the match fields before persistence, and the caller supplies
+`created_at` when storing a result. See the [matching guide](JOB_MATCHING.md#ranking-and-explaining-recommendations).
 
 ---
 
@@ -423,7 +426,9 @@ to generate:
 Match Result
 ```
 
-The frontend uses these records to display recommendations and allow users to save, dismiss, or mark jobs as applied.
+Ranked recommendations are currently available through the backend matching
+function. The frontend Explore view currently uses sample postings. Job
+Tracking defines the saved, dismissed, and applied statuses for persisted jobs.
 
 ---
 
