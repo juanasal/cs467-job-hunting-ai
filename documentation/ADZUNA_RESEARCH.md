@@ -97,7 +97,7 @@ The testing identified several items that should be considered before building f
 
 - **Job descriptions:** The Search API provides description snippets rather than complete job descriptions. Confirm whether snippets are sufficient for the planned job matching and AI features.
 - **Remote status:** There is no structured remote/hybrid/onsite field in the tested results. For JH-027, the normalizer uses conservative phrase-based inference when the title or description provides clear evidence of remote, hybrid, or onsite work. If the workplace type is unclear or contradicted by the text, it is set to `unknown`.
-- **Salary:** Some salary values are predicted by Adzuna. Decide whether predicted salaries should be displayed or processed differently from non-predicted salaries.
+- **Salary.** JH-037 keeps job salary bounds only when ingestion can verify annual units and currency. The current search feed supplies no verified annual unit, so its bounds are stored as `null`. The prediction flag is retained, and predicted salary is unverified for matching.
 - **Optional fields:** Fields such as `contract_time` and `contract_type` are not consistently available. The data model should allow these fields to be missing.
 - **API access:** The current project account has limited test access. Confirm whether paid or otherwise approved API access will be needed for continued development and the final demo.
 - **Academic use and storage:** Confirm that the project's planned database storage, refresh, and expiration approach is permitted for continued academic use before implementing the full data pipeline.

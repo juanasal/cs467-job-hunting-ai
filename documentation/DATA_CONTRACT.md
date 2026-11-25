@@ -126,6 +126,9 @@ Stores the user's current job-search criteria.
 | `salary_min` | number or null | No | Annual salary | Minimum desired salary |
 | `salary_max` | number or null | No | Annual salary | Maximum desired salary, if applicable |
 | `salary_currency` | string | Yes | `USD` for MVP | Salary currency |
+| `strict_location` | boolean | No | Defaults to `false` | Exclude confirmed violations of the location preference |
+| `strict_workplace` | boolean | No | Defaults to `false` | Exclude confirmed violations of the work arrangement preference |
+| `strict_salary` | boolean | No | Defaults to `false` | Exclude confirmed violations of the salary preference |
 | `result_count` | integer | Yes | Positive integer | Number of recommendations requested |
 
 ### Example
@@ -153,6 +156,9 @@ Stores the user's current job-search criteria.
 ```
 
 A `null` salary value means the user did not specify that limit.
+The preferences PUT replaces the saved record. Omitted strict flags default to
+`false`. Missing or incomparable job evidence leaves the job eligible with the
+affected preference unverified, including when the preference is strict.
 
 ---
 
@@ -353,7 +359,8 @@ unknown
 
 For the MVP:
 
-- Salaries are treated as annual amounts.
+- Job salary bounds are populated only when ingestion verifies annual units
+  and currency. Hourly or unknown-unit amounts are withheld without conversion.
 - Currency should be stored separately.
 - User search preferences use `USD`.
 - Missing salary information should use `null`.

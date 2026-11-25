@@ -26,9 +26,8 @@ clock, or AI dependencies.
 The `exact-v1` baseline adopts the qualification rules in the
 [matching design](decisions/matching.md), including unspecified priorities.
 JH-036 adds `related-v1`, the default method. Pass `method_version="exact-v1"`
-to reproduce baseline scoring. Filtering policy and the public diagnostics schema
-remain proposals.
-The [shared contract](DATA_CONTRACT.md) is unchanged.
+to reproduce baseline scoring. The public diagnostics schema remains a proposal.
+Saved strictness and annual salary fields follow the [shared contract](DATA_CONTRACT.md).
 
 The module uses dictionaries consistently with the job normalizer and repository;
 there is no shared profile/job Python model.
@@ -38,12 +37,12 @@ shared-record fields upstream. Invalid scoring inputs raise `ValueError`, produc
 score. Missing required profile fields are invalid, rather than silently treated as a
 valid incomplete profile. Valid `other` education is unevaluable.
 
-A score makes no inclusion/exclusion decision. No preference points, filter, ranking,
-persistence, endpoint, or frontend control is added. A zero score is qualification
-alignment of zero; it never means a confirmed preference exclusion. Future assembly
-must evaluate preferences separately and keep exclusions distinct from scores and
-unknown compatibility. Until then results must not be presented as eligible or fully
-compatible recommendations.
+Call `app.match_evaluation.evaluate_match(profile, job, preferences, requirements=prepared)`
+with the saved JH-018 preference record to combine qualification fit with eligibility.
+The internal result gives each preference's status and returns qualification points for
+eligible jobs. Confirmed strict mismatches produce exclusion reasons. Soft mismatches
+and unverified preferences leave the qualification score unchanged. Ranking and
+recommendation explanations remain downstream.
 
 ## Extracting requirements from job descriptions
 
@@ -235,5 +234,4 @@ proof of inability. Sparse requirements can also inflate visible skill coverage:
 matched target can outscore four of five matched targets. Component coverage does not
 measure description completeness or confidence.
 
-Preference policy, supporting contract gaps, recommendation assembly, ranking, and
-public diagnostic output remain open.
+Recommendation assembly, ranking, and public diagnostic output remain open.

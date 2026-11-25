@@ -154,7 +154,9 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 ## 7. Recommendation Testing
 
-`backend/tests/test_job_requirements.py` checks priority, exact evidence, and incomplete descriptions. `backend/tests/test_job_matching.py` checks the `exact-v1` baseline and compares it with the default `related-v1` scorer using the same extracted requirements and synthetic profiles. The comparison covers directed partial credit, zero-credit controls, and exact credit taking precedence. Preference filtering remains follow-up work. See the [matching guide](JOB_MATCHING.md) for the comparison results.
+`backend/tests/test_job_requirements.py` checks priority, exact evidence, and incomplete descriptions. `backend/tests/test_job_matching.py` compares the `exact-v1` baseline with the default `related-v1` scorer, covering directed partial credit, zero-credit controls, and precedence for exact credit. See the [matching guide](JOB_MATCHING.md) for the comparison results.
+
+`backend/tests/test_match_evaluation.py` checks strict exclusions, soft mismatches, unverified preferences, incomplete profiles, and score bounds and component totals. `backend/tests/test_job_normalizer.py` covers withholding salary without verified annual units and currency. `backend/tests/test_search_preferences.py` uses MySQL to verify that each strict flag persists through PUT and GET and that changing a flag marks only the current user's matches for recalculation. Apply migration `004_add_strict_preferences.sql` before running the preferences integration tests.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.
