@@ -456,15 +456,14 @@ The same examples also provide a few useful boundary checks:
 
 The workflow starts with input validation, then separates four responsibilities. These
 describe how the workflow is organized. The [matching guide](../JOB_MATCHING.md)
-documents the implemented extraction, scoring, and preference evaluation interfaces.
-Recommendation assembly and ranking remain future work.
+documents the implemented extraction, scoring, preference evaluation, and ranking interfaces.
 
 | Component | Inputs | Outputs |
 | --- | --- | --- |
 | Requirement extraction | A validated job description | Skill targets and education/experience minima, priorities, exact supporting text, and ambiguity/partial-description warnings. |
 | Qualification scoring | Validated profile, extracted qualification targets, and method version | S/E/X, component points, rounded qualification score, matched profile skills, and contributing reasons. It does not decide preference compatibility. |
 | Preference evaluation | Saved preferences with strict flags, normalized job fields, job description, and a prepared qualification record | Per-preference statuses, explicit worker-location evidence, and eligibility with exclusion reasons. Eligible results include qualification diagnostics. |
-| Recommendation assembly and ranking | Qualification results and preference decisions for valid records | Included results ordered by score then job ID, concise explanations that preserve incompatibility/uncertainty, and up to `result_count` results. Excluded and rejected records do not create persisted recommendations. |
+| Recommendation assembly and ranking | Profile, saved preferences, and candidate jobs evaluated by the existing matching stages | Eligible results ordered by descending final score and ascending job ID, with evidence-based explanations and up to `result_count` results after sorting. Excluded and rejected records produce no recommendations. |
 
 Baseline scoring tests can supply hand-authored extracted requirements directly, so a
 score failure can be separated from an extraction failure. Description-based tests
@@ -474,7 +473,7 @@ below. No diagnostic adapter is required for invalid records.
 The implemented comparison tests use the same profiles and extracted requirements
 for both methods. They cover the related pairs from MATCH-003 through MATCH-005,
 exact-match precedence, and zero-credit controls.
-See the [recorded scores](../JOB_MATCHING.md#validation-and-limitations). The proposed combined
+See the [recorded scores](../JOB_MATCHING.md#validation-and-limitations). The combined
 workflow applies qualification weights and preference filters separately; ranking orders
 included jobs and supplies their explanations. A later proposal that gives soft
 preferences points will need its own reviewed expectations.

@@ -41,8 +41,38 @@ Call `app.match_evaluation.evaluate_match(profile, job, preferences, requirement
 with the saved JH-018 preference record to combine qualification fit with eligibility.
 The internal result gives each preference's status and returns qualification points for
 eligible jobs. Confirmed strict mismatches produce exclusion reasons. Soft mismatches
-and unverified preferences leave the qualification score unchanged. Ranking and
-recommendation explanations remain downstream.
+and unverified preferences leave the qualification score unchanged.
+
+## Ranking and explaining recommendations
+
+Call `app.match_evaluation.recommend_jobs(profile, jobs, preferences)` with the shared
+profile, an iterable of normalized, persisted jobs with unique job IDs, and the saved
+search preferences record. The function extracts and prepares requirements, then uses
+the existing preference evaluation and qualification score for each candidate.
+
+- Eligible jobs are ordered by descending final (rounded) `match_score`. Ties use
+  ascending `job_id`, regardless of candidate order. The saved `result_count` is applied
+  after sorting and limits recommendations within the supplied candidate pool.
+- Strict preference mismatches exclude jobs. Soft mismatches and unverified preferences
+  are explained when relevant and leave the score unchanged. Job titles still guide
+  collection. The explanation reports location, workplace, and salary comparisons
+  when the user has specified those preferences.
+- Each recommendation uses deterministic text templates backed by the scoring
+  diagnostics. They describe direct skills, related skills earning partial credit,
+  skill targets without matching profile evidence, education and experience comparisons,
+  and known uncertainties such as incomplete descriptions. A known level shortfall
+  refers to the recorded level. An unmatched skill means matching evidence was unavailable
+  in the profile.
+- Missing or invalid required profile data yields an empty list. Jobs missing required
+  matching data, such as a usable description or persisted ID, are skipped. Optional
+  unavailable job fields are handled by the preference evaluator. Empty candidate pools
+  and pools without eligible jobs return an empty list.
+
+The ordered list contains dictionaries with `user_id`, `job_id`, `match_score`,
+`matched_skills`, and `match_explanation`. `matched_skills` uses credited profile
+skill names, including sources of related matches. The caller supplies `created_at`
+if persisting these records under the [Match Result contract](DATA_CONTRACT.md#5-match-result).
+This is a backend function with no network or database calls.
 
 ## Extracting requirements from job descriptions
 
@@ -205,7 +235,7 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
 From `backend/` with dependencies installed:
 
 ```bash
-python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q
+python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q
 python -m pytest -q
 ```
 
@@ -233,5 +263,3 @@ source snippets omit qualifications; missing evidence earns zero and must not be
 proof of inability. Sparse requirements can also inflate visible skill coverage: one
 matched target can outscore four of five matched targets. Component coverage does not
 measure description completeness or confidence.
-
-Recommendation assembly, ranking, and public diagnostic output remain open.
