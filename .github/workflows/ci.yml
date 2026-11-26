@@ -101,7 +101,12 @@ jobs:
           if-no-files-found: ignore
 
   frontend:
-    name: Frontend lint and build
+    # GenAI attribution:
+    # Updated with assistance from ChatGPT (OpenAI).
+    # Prompt: Add npm test to the existing frontend CI job for JH-020,
+    # preserving all existing backend and frontend workflow steps.
+    # Reviewed and adapted for the CS467 Job Hunting AI project.
+    name: Frontend lint, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -125,6 +130,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
