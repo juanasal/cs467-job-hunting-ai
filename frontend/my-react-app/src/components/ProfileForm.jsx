@@ -1,18 +1,20 @@
-
 /*
 GenAI attribution:
 Developed with assistance from ChatGPT (OpenAI).
-Prompt: Implement the JH-019 React profile form using the
-existing FastAPI profile endpoints, including skill validation,
-education and experience fields, CSRF protection, loading,
-saving, and error handling. Refine the loading effect to avoid
-React set-state-in-effect warnings.
+Prompt: Implement JH-020 by extending the existing JH-019
+React profile form with education guidance, incomplete-profile
+feedback, field-specific validation, and profile completion
+status. Extract profile completion validation into a separate
+module to avoid React Fast Refresh lint warnings. Preserve
+the existing FastAPI integration, CSRF handling, skills
+management, and loading/saving behavior.
 Reviewed and adapted for the CS467 Job Hunting AI project.
 */
 
 import { useEffect, useState } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { CheckCircle2, Info, Plus, Save, X } from "lucide-react";
 import { apiFetch } from "../api";
+import { getMissingProfileFields } from "./profileCompletion";
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "High School" },
@@ -48,8 +50,17 @@ export default function ProfileForm() {
   const [experienceLevel, setExperienceLevel] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const missingFields = getMissingProfileFields({
+    skills,
+    educationLevel,
+    experienceLevel,
+  });
+
+  const isComplete = missingFields.length === 0;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,6 +81,7 @@ export default function ProfileForm() {
           setSkills([]);
           setEducationLevel("");
           setExperienceLevel("");
+          setSaved(false);
           return;
         }
 
@@ -86,6 +98,7 @@ export default function ProfileForm() {
         setSkills(data.skills ?? []);
         setEducationLevel(data.education_level ?? "");
         setExperienceLevel(data.experience_level ?? "");
+        setSaved(true);
       } catch (err) {
         if (!controller.signal.aborted) {
           setError(err.message || "Unable to load your profile.");
@@ -105,6 +118,7 @@ export default function ProfileForm() {
   function clearFeedback() {
     setError("");
     setMessage("");
+    setSaved(false);
   }
 
   function addSkill() {
@@ -146,15 +160,13 @@ export default function ProfileForm() {
 
   async function handleSave(event) {
     event.preventDefault();
-    clearFeedback();
+    setError("");
+    setMessage("");
 
-    if (skills.length === 0) {
-      setError("Please add at least one skill.");
-      return;
-    }
-
-    if (!educationLevel || !experienceLevel) {
-      setError("Please select your education and experience levels.");
+    if (!isComplete) {
+      setError(
+        `Please complete the following: ${missingFields.join(" ")}`
+      );
       return;
     }
 
@@ -186,8 +198,10 @@ export default function ProfileForm() {
       setSkills(data.skills ?? []);
       setEducationLevel(data.education_level ?? "");
       setExperienceLevel(data.experience_level ?? "");
+      setSaved(true);
       setMessage("Your profile has been saved successfully.");
     } catch (err) {
+      setSaved(false);
       setError(err.message || "Unable to save your profile.");
     } finally {
       setSaving(false);
@@ -196,16 +210,54 @@ export default function ProfileForm() {
 
   return (
     <section className="profile-form-card">
-      <h2>Skills and Experience</h2>
+      <h2>Skills, Education and Experience</h2>
 
       <p className="profile-form-description">
         Add your background information to improve job matching.
+        Education and experience are based on the information
+        you provide and are not independently verified.
       </p>
 
       {loading ? (
         <p role="status">Loading your profile...</p>
       ) : (
         <form onSubmit={handleSave}>
+          {missingFields.length > 0 ? (
+            <div
+              className="profile-completion-notice"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="profile-completion-heading">
+                <Info size={18} aria-hidden="true" />
+                <strong>Complete your profile</strong>
+              </div>
+
+              <p>
+                To get more accurate job matches, please:
+              </p>
+
+              <ul>
+                {missingFields.map((field) => (
+                  <li key={field}>{field}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div
+              className="profile-completion-success"
+              role="status"
+              aria-live="polite"
+            >
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <span>
+                {saved
+                  ? "Your profile is complete and saved."
+                  : "All required fields are filled. Save your changes."}
+              </span>
+            </div>
+          )}
+
           <div className="profile-form-field">
             <label htmlFor="profile-skill-input">Skills</label>
 
@@ -278,6 +330,10 @@ export default function ProfileForm() {
                 </option>
               ))}
             </select>
+
+            <p className="profile-field-hint">
+              Select your highest completed education level.
+            </p>
           </div>
 
           <div className="profile-form-field">
@@ -302,6 +358,10 @@ export default function ProfileForm() {
                 </option>
               ))}
             </select>
+
+            <p className="profile-field-hint">
+              Choose the level that best describes your work experience.
+            </p>
           </div>
 
           {error && (
