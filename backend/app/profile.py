@@ -45,15 +45,8 @@ class ProfileResponse(ProfileData):
     user_id: int
 
 
-@router.get("", response_model=ProfileResponse)
-def get_profile(
-    conn: DbConnection,
-    current_user: dict = Depends(get_current_user),
-):
-    """Return the signed-in user's saved profile."""
-
-    user_id = current_user["user_id"]
-
+def load_profile(conn, user_id):
+    """Load the user's saved qualifications and skills from MySQL."""
     profile = fetch_one(
         conn,
         """
@@ -65,10 +58,7 @@ def get_profile(
     )
 
     if profile is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Profile not found.",
-        )
+        return None
 
     skills = fetch_all(
         conn,
@@ -87,6 +77,18 @@ def get_profile(
         "education_level": profile["education_level"],
         "experience_level": profile["experience_level"],
     }
+
+
+@router.get("", response_model=ProfileResponse)
+def get_profile(
+    conn: DbConnection,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the signed-in user's saved profile."""
+    profile = load_profile(conn, current_user["user_id"])
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Profile not found.")
+    return profile
 
 
 @router.put(

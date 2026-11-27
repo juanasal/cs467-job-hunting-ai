@@ -57,12 +57,11 @@ build Adzuna queries.
 The limits are application-level safeguards, not Adzuna's
 official API quotas.
 
-Collection stops after gathering up to the saved `result_count`, capped at 100.
-The ranker separately applies `result_count` after scoring and sorting the
-candidates passed to it. When ranking uses only the candidates from a collection
-run, postings beyond that run's collection limit are outside the ranked pool.
-The number of recommendations can be lower than requested if there are fewer
-usable or eligible candidates.
+Each explicit collection run gathers up to the saved `result_count`, capped at
+100 jobs. The recommendation endpoint reads active jobs already committed in
+MySQL, including jobs from earlier runs and manual imports. It applies the
+saved `result_count` after filtering, scoring, and sorting that pool. The feed
+can return fewer results when fewer candidates are usable or eligible.
 
 ## Error Handling
 

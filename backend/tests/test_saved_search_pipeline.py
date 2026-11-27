@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import pytest
 
 from app import saved_search_pipeline as pipeline
+from app.adzuna_client import AdzunaRequestError
 
 
 def make_preferences(
@@ -299,6 +300,34 @@ def test_invalid_user_id_is_rejected():
             client=FakeAdzunaClient(),
             settings=object(),
         )
+
+
+def test_source_failure_after_a_successful_page_never_starts_a_write(monkeypatch):
+    connections = []
+    requested_pages = []
+
+    @contextmanager
+    def fake_transaction(settings):
+        connections.append(object())
+        yield connections[-1]
+
+    class FailingSource:
+        max_pages = 5
+
+        def fetch_page(self, *, page, results_per_page, **query):
+            requested_pages.append(page)
+            if page == 1:
+                return {"results": [make_raw_job(job_id) for job_id in range(results_per_page)]}
+            raise AdzunaRequestError("Adzuna API request failed.")
+
+    monkeypatch.setattr(pipeline, "transaction", fake_transaction)
+    monkeypatch.setattr(pipeline, "load_preferences", lambda *_: make_preferences(result_count=25))
+
+    with pytest.raises(AdzunaRequestError):
+        pipeline.run_saved_search(1, client=FailingSource(), settings=object())
+
+    assert requested_pages == [1, 2]
+    assert len(connections) == 1
 
 
 def test_database_failure_propagates(monkeypatch):

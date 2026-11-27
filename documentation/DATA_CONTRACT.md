@@ -259,8 +259,8 @@ Stores the result of comparing a user profile and preferences with a job posting
 
 Preferences determine eligibility and contribute to the explanation. Ranking
 uses the qualification score and breaks ties by ascending job ID. The backend
-ranker returns the match fields before persistence, and the caller supplies
-`created_at` when storing a result. See the [matching guide](JOB_MATCHING.md#ranking-and-explaining-recommendations).
+ranker returns the match fields before the caller supplies `created_at`. For
+live API matches this field is the UTC evaluation time. See the [matching guide](JOB_MATCHING.md#ranking-and-explaining-recommendations).
 
 ---
 
@@ -430,10 +430,12 @@ to generate:
 Match Result
 ```
 
-Ranked recommendations are currently available through the backend matching
-function. Saved match results and job details are returned by
-`GET /api/recommendations` and `GET /api/jobs/{job_id}` (see the
-[backend README](../backend/README.md#recommendations-and-job-details-api)).
+The authenticated `GET /api/recommendations` route ranks active MySQL jobs using
+the user's saved profile and preferences and returns a `job` and `match` for
+each recommendation. Insufficient inputs and an empty eligible pool return
+`200` with `{"recommendations": []}`. The feed reads committed jobs during
+pending or failed ingestion. `GET /api/jobs/{job_id}` returns job details and an
+available match. See the [backend README](../backend/README.md#recommendations-and-job-details-api).
 The frontend Explore view currently uses sample postings. Job
 Tracking defines the saved, dismissed, and applied statuses for persisted jobs.
 

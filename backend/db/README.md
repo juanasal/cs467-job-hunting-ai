@@ -39,10 +39,10 @@ currency because the prior importer did not verify units, and marks affected
 matches for recalculation. Apply it before deploying the updated preferences API.
 
 Migration `005_add_jobs_is_active.sql` adds `jobs.is_active`, which defaults to
-true so existing jobs stay active. Apply it before deploying the recommendations
-API (JH-041), which reads the column. If you already have a local development
-database, run only the `005` command above on it. Without it,
-`GET /api/recommendations` and `GET /api/jobs/{job_id}` return a 500 error.
+true so existing jobs stay active. The recommendations API uses the preference
+columns from migration `004` and the job activity flag from migration `005`.
+For an existing development database, check which migrations have been applied
+and apply all missing migrations in order before using the API.
 
 The session migration uses `CREATE TABLE IF NOT EXISTS`. This makes it safe to run on a development database where `user_sessions` was already created by the earlier `002_create_sessions.sql` migration. If the table already exists, MySQL leaves it unchanged. Do not rerun migrations `001` or `002` against an existing database; migrations are intended to run once, in order.
 
