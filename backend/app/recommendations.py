@@ -22,7 +22,7 @@ JOB_COLUMNS = """
     j.job_id, j.external_job_id, j.source, j.title, j.company, j.location,
     j.workplace_type, j.salary_min, j.salary_max, j.salary_currency,
     j.salary_is_predicted, j.description, j.date_posted, j.job_url,
-    j.retrieved_at, j.first_seen_at
+    j.retrieved_at, j.first_seen_at, j.is_active
 """
 
 MATCH_COLUMNS = """
@@ -62,6 +62,7 @@ def job_response(row):
         "job_url": row["job_url"],
         "retrieved_at": to_iso(row["retrieved_at"]),
         "first_seen_at": to_iso(row["first_seen_at"]),
+        "is_active": bool(row["is_active"]),
     }
 
 
@@ -106,7 +107,7 @@ def list_recommendations(
 ):
     """Return the signed-in user's saved match results, best match first.
 
-    Dismissed jobs are left out. Saved and applied jobs stay in the feed.
+    Inactive and dismissed jobs are left out. Saved and applied jobs stay.
     """
     user_id = current_user["user_id"]
 
@@ -124,6 +125,7 @@ def list_recommendations(
         FROM match_results m
         JOIN jobs j ON j.job_id = m.job_id
         WHERE m.user_id = %s
+          AND j.is_active = TRUE
           AND NOT EXISTS (
               SELECT 1 FROM job_tracking t
               WHERE t.user_id = %s AND t.job_id = j.job_id AND t.status = 'dismissed'
@@ -149,7 +151,10 @@ def get_job(
     job_id: int = Path(gt=0),
     current_user: dict = Depends(get_current_user),
 ):
-    """Return one job and the signed-in user's match for it (or null)."""
+    """Return one job and the signed-in user's match for it (or null).
+
+    Inactive jobs are still returned so saved and applied jobs can be opened.
+    """
     user_id = current_user["user_id"]
 
     row = fetch_one(

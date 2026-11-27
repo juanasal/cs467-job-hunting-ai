@@ -9,7 +9,8 @@ backend/db/
 │   ├── 002_add_jobs_first_seen_at.sql
 │   ├── 003_add_match_results_recalculation_flag.sql
 │   ├── 003_create_user_sessions.sql
-│   └── 004_add_strict_preferences.sql
+│   ├── 004_add_strict_preferences.sql
+│   └── 005_add_jobs_is_active.sql
 └── seed/
     └── dev_seed.sql
 ```
@@ -24,6 +25,7 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migration
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_add_match_results_recalculation_flag.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/003_create_user_sessions.sql
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/004_add_strict_preferences.sql
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/migrations/005_add_jobs_is_active.sql
 
 # 2. (Optional) Load the example data
 mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < backend/db/seed/dev_seed.sql
@@ -35,6 +37,12 @@ Migration `004_add_strict_preferences.sql` defaults the three strict flags to
 false for existing searches. It also clears legacy Adzuna salary bounds and
 currency because the prior importer did not verify units, and marks affected
 matches for recalculation. Apply it before deploying the updated preferences API.
+
+Migration `005_add_jobs_is_active.sql` adds `jobs.is_active`, which defaults to
+true so existing jobs stay active. Apply it before deploying the recommendations
+API (JH-041), which reads the column. If you already have a local development
+database, run only the `005` command above on it. Without it,
+`GET /api/recommendations` and `GET /api/jobs/{job_id}` return a 500 error.
 
 The session migration uses `CREATE TABLE IF NOT EXISTS`. This makes it safe to run on a development database where `user_sessions` was already created by the earlier `002_create_sessions.sql` migration. If the table already exists, MySQL leaves it unchanged. Do not rerun migrations `001` or `002` against an existing database; migrations are intended to run once, in order.
 
@@ -103,7 +111,7 @@ Deleting a user deletes all of their rows in the other tables, including their a
 
 ## Known limitations
 
-- Deleting a job also deletes users' saved/applied rows for it, so don't delete expired jobs for now. To hide them later, we could add an `is_active` column, but `DATA_CONTRACT.md` must be updated first.
+- Deleting a job also deletes users' saved/applied rows for it, so don't delete expired jobs. Set `is_active = FALSE` instead: inactive jobs are left out of the recommendations feed but can still be opened from job details, so saved and applied jobs keep working. Nothing marks jobs inactive automatically yet, and re-importing a job doesn't change `is_active`.
 - The data contract requires skills, job titles, and locations, but the database can't check that a user has at least one of each. The backend must check this before saving.
 
 ## AI use

@@ -184,6 +184,7 @@ Stores a standardized job listing retrieved from an external source such as Adzu
 | `job_url` | string | Yes | Valid URL | Link to original listing |
 | `retrieved_at` | datetime | Yes | ISO 8601 | When the application retrieved the listing |
 | `first_seen_at` | datetime | Yes | ISO 8601 | Retrieval timestamp of the first stored observation of the job listing |
+| `is_active` | boolean | Yes | `true`, `false` | Whether the job can appear in recommendations; defaults to `true` |
 
 ### Example
 
@@ -204,10 +205,13 @@ Stores a standardized job listing retrieved from an external source such as Adzu
   "date_posted": "2026-10-18",
   "job_url": "https://example.com/jobs/123456",
   "retrieved_at": "2026-10-19T18:30:00Z",
-  "first_seen_at": "2026-10-19T18:30:00Z"
+  "first_seen_at": "2026-10-19T18:30:00Z",
+  "is_active": true
 }
 ```
 `first_seen_at` is initialized from `retrieved_at` when a job is first stored and remains unchanged on later imports. `retrieved_at` records the latest retrieval timestamp. If an older import arrives after a newer one, it does not overwrite the newer timestamp or job details.
+
+Inactive jobs (`is_active` is `false`) are kept rather than deleted so saved and applied jobs remain available. They are left out of recommendations but still returned by job details.
 
 If an external source does not provide a field such as salary or location, that field should be stored as `null`.
 

@@ -72,6 +72,10 @@ jobs:
             mysql -uroot -prootpassword test_db \
             < db/migrations/004_add_strict_preferences.sql
 
+          docker exec -i ${{ job.services.mysql.id }} \
+            mysql -uroot -prootpassword test_db \
+            < db/migrations/005_add_jobs_is_active.sql
+
       - name: Verify database tables
         run: |
           docker exec ${{ job.services.mysql.id }} \

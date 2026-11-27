@@ -67,6 +67,11 @@ def set_result_count(settings, user_id, result_count):
         )
 
 
+def set_inactive(settings, job_id):
+    with transaction(settings) as conn:
+        conn.cursor().execute("UPDATE jobs SET is_active = FALSE WHERE job_id = %s", (job_id,))
+
+
 def feed_job_ids(client):
     response = client.get("/api/recommendations")
     assert response.status_code == 200, response.text
@@ -116,6 +121,7 @@ def test_feed_returns_contract_fields(test_settings, make_user, make_jobs):  # n
     assert job["date_posted"] == "2026-11-01"
     assert job["retrieved_at"] == "2026-11-01T12:00:00Z"
     assert job["first_seen_at"] == "2026-11-01T12:00:00Z"
+    assert job["is_active"] is True
 
 
 def test_feed_sorts_by_score_then_job_id(test_settings, make_user, make_jobs):  # noqa: F811
@@ -154,6 +160,32 @@ def test_feed_hides_only_dismissed_jobs(test_settings, make_user, make_jobs):  #
     # Undoing the dismissal puts the job back in the feed.
     assert client.delete(f"/api/tracking/{dismissed}", headers=headers).status_code == 204
     assert feed_job_ids(client) == [saved, dismissed, applied]
+
+
+def test_feed_hides_inactive_jobs(test_settings, make_user, make_jobs):  # noqa: F811
+    client, _, user_id = make_user()
+    active, inactive = make_jobs(2)
+    add_match(test_settings, user_id, active, 60)
+    add_match(test_settings, user_id, inactive, 90)
+    set_inactive(test_settings, inactive)
+
+    assert feed_job_ids(client) == [active]
+
+
+def test_job_details_returns_inactive_job(test_settings, make_user, make_jobs):  # noqa: F811
+    client, headers, user_id = make_user()
+    (job_id,) = make_jobs(1)
+    add_match(test_settings, user_id, job_id, 90)
+    assert client.put(
+        f"/api/tracking/{job_id}", json={"status": "saved"}, headers=headers
+    ).status_code == 200
+    set_inactive(test_settings, job_id)
+
+    # A saved job that goes inactive can still be opened, with its match.
+    response = client.get(f"/api/jobs/{job_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["job"]["is_active"] is False
+    assert response.json()["match"]["match_score"] == 90
 
 
 def test_job_details_with_and_without_match(test_settings, make_user, make_jobs):  # noqa: F811
