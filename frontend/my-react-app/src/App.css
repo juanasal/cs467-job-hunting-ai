@@ -498,3 +498,53 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   gap: 8px;
   margin: 12px 0 16px;
 }
+
+/*
+GenAI attribution:
+Developed with assistance from ChatGPT (OpenAI).
+Prompt: Style JH-022 salary range inputs using a responsive
+two-column layout consistent with the existing profile form.
+Reviewed and adapted for the CS467 Job Hunting AI project.
+*/
+
+.preference-salary-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 24px;
+  min-width: 0;
+}
+
+.preference-salary-fieldset legend {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.preference-salary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.preference-salary-grid .profile-form-field {
+  min-width: 0;
+  margin-bottom: 12px;
+}
+
+.preference-salary-grid input {
+  box-sizing: border-box;
+}
+
+.preference-salary-fieldset > .profile-field-hint
+  + .profile-field-hint {
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .preference-salary-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
