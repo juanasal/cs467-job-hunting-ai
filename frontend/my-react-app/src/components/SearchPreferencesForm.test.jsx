@@ -13,6 +13,15 @@ responses to verify that field-level validation details are
 displayed instead of the generic "Request validation failed"
 message.
 
+Follow-up prompt: Test non-blocking warnings for unmatched
+job titles and locations, case-insensitive matching, independent
+validation against all current postings, and saving preferences
+without removing unmatched values.
+
+Follow-up prompt: Add a regression test to verify that existing
+strict_location, strict_workplace, and strict_salary values
+are preserved when users update their search preferences.
+
 Reviewed and adapted for the CS467 Job Hunting AI project.
 */
 
@@ -130,6 +139,53 @@ describe("SearchPreferencesForm (JH-021)", () => {
     expect(payload.salary_min).toBe("80000.00");
     expect(payload.salary_max).toBe("150000.00");
     expect(payload.salary_currency).toBe("USD");
+    expect(payload.result_count).toBe(35);
+  });
+
+  // JH-021: Preserve strict preference flags introduced in main.
+  // Developed with assistance from ChatGPT (OpenAI).
+  // Prompt: Verify that editing search preferences preserves
+  // existing strict flags, including both true and false values.
+  it("preserves existing strict preference flags when saving changes", async () => {
+    mockApi({
+      ...savedPreferences,
+      strict_location: true,
+      strict_workplace: false,
+      strict_salary: true,
+    });
+
+    const user = userEvent.setup();
+    render(<SearchPreferencesForm />);
+
+    await screen.findByText("Software Engineer");
+
+    await user.click(screen.getByLabelText("Remote"));
+
+    await user.click(
+      screen.getByRole("button", { name: "Save Preferences" })
+    );
+
+    expect(
+      await screen.findByText(
+        "Your search preferences have been saved successfully."
+      )
+    ).toBeInTheDocument();
+
+    const putCall = apiFetch.mock.calls.find(
+      ([path, options]) =>
+        path === "/api/preferences" && options?.method === "PUT"
+    );
+
+    expect(putCall).toBeDefined();
+
+    const payload = JSON.parse(putCall[1].body);
+
+    expect(payload.workplace_type).toEqual(["hybrid", "remote"]);
+    expect(payload.strict_location).toBe(true);
+    expect(payload.strict_workplace).toBe(false);
+    expect(payload.strict_salary).toBe(true);
+    expect(payload.salary_min).toBe("80000.00");
+    expect(payload.salary_max).toBe("150000.00");
     expect(payload.result_count).toBe(35);
   });
 
@@ -322,5 +378,197 @@ describe("SearchPreferencesForm (JH-021)", () => {
     ).not.toHaveTextContent(
       "Request validation failed"
     );
+  });
+
+  // GenAI attribution:
+  // Developed with assistance from ChatGPT (OpenAI).
+  // Prompt: Add UI regression tests for unmatched preference warnings,
+  // non-blocking saving, independent matching, and warning removal.
+  // Reviewed and adapted for the CS467 Job Hunting AI project.
+
+  it("shows warnings next to unmatched saved titles and locations", async () => {
+    mockApi();
+    render(<SearchPreferencesForm />);
+
+    const title = await screen.findByText("Software Engineer");
+    const location = screen.getByText("Portland, OR");
+
+    const titleEntry = title.closest(".preference-entry");
+    const locationEntry = location.closest(".preference-entry");
+
+    expect(
+      within(titleEntry).getByRole("status")
+    ).toHaveTextContent(
+      "No current postings match “Software Engineer”."
+    );
+
+    expect(
+      within(locationEntry).getByRole("status")
+    ).toHaveTextContent(
+      "No current postings match “Portland, OR”."
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Save Preferences" })
+    ).toBeEnabled();
+
+    expect(
+      screen.queryByRole("alert")
+    ).not.toBeInTheDocument();
+  });
+
+  it("allows users to save unmatched titles and locations", async () => {
+    mockApi();
+
+    const user = userEvent.setup();
+    render(<SearchPreferencesForm />);
+
+    await screen.findByText(
+      /No current postings match “Software Engineer”/
+    );
+
+    expect(
+      screen.getByText(
+        /No current postings match “Portland, OR”/
+      )
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Save Preferences" })
+    );
+
+    expect(
+      await screen.findByText(
+        "Your search preferences have been saved successfully."
+      )
+    ).toBeInTheDocument();
+
+    const putCall = apiFetch.mock.calls.find(
+      ([path, options]) =>
+        path === "/api/preferences" && options?.method === "PUT"
+    );
+
+    expect(putCall).toBeDefined();
+
+    const payload = JSON.parse(putCall[1].body);
+
+    expect(payload.job_titles).toEqual(["Software Engineer"]);
+    expect(payload.locations).toEqual(["Portland, OR"]);
+    expect(payload.workplace_type).toEqual(["hybrid"]);
+    expect(payload.salary_min).toBe("80000.00");
+    expect(payload.salary_max).toBe("150000.00");
+    expect(payload.result_count).toBe(35);
+
+    expect(
+      screen.getByText(
+        /No current postings match “Software Engineer”/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        /No current postings match “Portland, OR”/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn about valid case-insensitive partial matches", async () => {
+    mockApi({
+      ...savedPreferences,
+      job_titles: ["FRONTEND"],
+      locations: ["san francisco"],
+    });
+
+    render(<SearchPreferencesForm />);
+
+    expect(
+      await screen.findByText("FRONTEND")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("san francisco")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText(/No current postings match/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("checks valid titles and locations independently of workplace restrictions", async () => {
+    mockApi({
+      ...savedPreferences,
+      job_titles: ["Frontend Developer"],
+      locations: ["San Francisco, CA"],
+      workplace_type: ["remote"],
+    });
+
+    render(<SearchPreferencesForm />);
+
+    expect(
+      await screen.findByText("Frontend Developer")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("San Francisco, CA")
+    ).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Remote")).toBeChecked();
+
+    expect(
+      screen.queryByText(/No current postings match/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("updates warnings when an unmatched entry is added or removed", async () => {
+    mockApi({
+      ...savedPreferences,
+      job_titles: ["Data Analyst"],
+      locations: ["Remote"],
+      workplace_type: ["remote"],
+    });
+
+    const user = userEvent.setup();
+    render(<SearchPreferencesForm />);
+
+    await screen.findByText("Data Analyst");
+
+    expect(
+      screen.queryByText(/No current postings match/)
+    ).not.toBeInTheDocument();
+
+    const titleInput = screen.getByLabelText("Preferred Job Titles");
+    const titleField = titleInput.closest(".profile-form-field");
+
+    await user.type(titleInput, "Unknown Job Title");
+
+    await user.click(
+      within(titleField).getByRole("button", { name: "Add" })
+    );
+
+    expect(
+      screen.getByText(
+        /No current postings match “Unknown Job Title”/
+      )
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove Unknown Job Title",
+      })
+    );
+
+    expect(
+      screen.queryByText(
+        /No current postings match “Unknown Job Title”/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Unknown Job Title")
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByText("Data Analyst")
+    ).toBeInTheDocument();
   });
 });

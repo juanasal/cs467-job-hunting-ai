@@ -13,6 +13,18 @@ import {
 import { initialApplications } from "./data/applications";
 import { jobPostings } from "./data/jobPostings";
 
+// GenAI attribution:
+// Developed with assistance from ChatGPT (OpenAI).
+// Prompt: Share preference matching between Profile and Job Postings,
+// identify unmatched saved preferences, and preserve existing filters.
+// Reviewed and adapted for the CS467 Job Hunting AI project.
+import {
+  matchesJobTitle,
+  matchesJobLocation,
+  matchesSavedPreferences,
+  getPreferenceWarnings,
+} from "./data/preferenceMatching";
+
 import Sidebar from "./components/Sidebar";
 import StatCard from "./components/StatCard";
 import JobApplicationRow from "./components/JobApplicationRow";
@@ -270,42 +282,51 @@ export default function App() {
       maximumFractionDigits: 0,
     }).format(val);
 
-  // JH-021: Saved preferences restrict the displayed results.
+  // GenAI attribution:
+  // Developed with assistance from ChatGPT (OpenAI).
+  // Prompt: Apply shared saved preference matching before local filters.
+  // Identify unmatched saved titles and locations using the full postings
+  // dataset, preserve strict workplace restrictions and salary filters,
+  // and distinguish incompatible saved preferences from local filters.
+  // Reviewed and adapted for the CS467 Job Hunting AI project.
+
+  const activeSavedPreferences = user
+    ? savedSearchPreferences
+    : null;
+
+  const {
+    unmatchedTitles,
+    unmatchedLocations,
+    noCombinedMatches,
+  } = getPreferenceWarnings(
+    jobPostings,
+    activeSavedPreferences
+  );
+
+  const hasUnmatchedPreferences =
+    unmatchedTitles.length > 0 ||
+    unmatchedLocations.length > 0;
+
+  // Saved preferences restrict the displayed results.
   // Local search filters can narrow results but cannot expand
-  // the user's saved workplace restrictions.
+  // the user's saved restrictions.
   const filteredAvailableJobs = jobPostings.filter((job) => {
-    const saved = savedSearchPreferences;
-
-    const savedTitles = saved?.job_titles ?? [];
-    const savedLocations = saved?.locations ?? [];
-    const savedWorkplaceTypes = saved?.workplace_type ?? [];
-
-    const normalizedTitle = job.title.toLowerCase();
-    const normalizedLocation = job.location.toLowerCase();
-    const normalizedWorkplace = job.workplace_type?.toLowerCase();
-
-    const matchesSavedTitles =
-      savedTitles.length === 0 ||
-      savedTitles.some((title) =>
-        normalizedTitle.includes(title.toLowerCase())
-      );
-
-    const matchesSavedLocations =
-      savedLocations.length === 0 ||
-      savedLocations.some((location) =>
-        normalizedLocation.includes(location.toLowerCase())
-      );
-
-    const matchesSavedWorkplace =
-      savedWorkplaceTypes.length === 0 ||
-      savedWorkplaceTypes.includes(normalizedWorkplace);
-
-    const matchesTitle = normalizedTitle.includes(
-      jobTitleSearch.toLowerCase()
+    const matchesSaved = matchesSavedPreferences(
+      job,
+      activeSavedPreferences
     );
 
-    const matchesLocation = normalizedLocation.includes(
-      jobLocation.toLowerCase()
+    const normalizedWorkplace =
+      job.workplace_type?.toLowerCase();
+
+    const matchesTitle = matchesJobTitle(
+      job,
+      jobTitleSearch
+    );
+
+    const matchesLocation = matchesJobLocation(
+      job,
+      jobLocation
     );
 
     const matchesWorkplace =
@@ -317,9 +338,7 @@ export default function App() {
       (job.salary_max == null || job.salary_max >= minSalary);
 
     return (
-      matchesSavedTitles &&
-      matchesSavedLocations &&
-      matchesSavedWorkplace &&
+      matchesSaved &&
       matchesTitle &&
       matchesLocation &&
       matchesWorkplace &&
@@ -515,6 +534,41 @@ export default function App() {
                 </p>
               )}
 
+              {/* JH-021 PR review fix:
+                  Show unmatched saved values even when other
+                  preferences still return matching postings.
+                  Developed with assistance from ChatGPT (OpenAI). */}
+              {user &&
+                canShowPostings &&
+                hasUnmatchedPreferences && (
+                  <div
+                    className="preference-warnings-list"
+                    role="status"
+                  >
+                    {unmatchedTitles.map((title) => (
+                      <p
+                        key={`title-${title}`}
+                        className="preference-warning"
+                      >
+                        No current postings match your saved
+                        job title “{title}”. Check the spelling
+                        or keep it for future postings.
+                      </p>
+                    ))}
+
+                    {unmatchedLocations.map((location) => (
+                      <p
+                        key={`location-${location}`}
+                        className="preference-warning"
+                      >
+                        No current postings match your saved
+                        location “{location}”. Check the spelling
+                        or keep it for future postings.
+                      </p>
+                    ))}
+                  </div>
+                )}
+
               <label htmlFor="job-title-search">
                 Job title
               </label>
@@ -654,12 +708,23 @@ export default function App() {
                     />
                   ))}
 
+                {/* JH-021 PR review fix:
+                    Distinguish incompatible saved preferences
+                    from empty results caused by local filters.
+                    Developed with assistance from ChatGPT (OpenAI). */}
                 {canShowPostings &&
                   filteredAvailableJobs.length === 0 && (
                     <p className="postings-empty">
-                      No matching jobs. Try changing your search
-                      or filters. Your saved preferences will
-                      remain in effect.
+                      {user && noCombinedMatches
+                        ? "No current postings match all your saved preferences."
+                        : "No matching jobs. Try changing your search or filters."}
+
+                      {user && savedSearchPreferences && (
+                        <>
+                          {" "}Your saved preferences will
+                          remain in effect.
+                        </>
+                      )}
                     </p>
                   )}
               </div>

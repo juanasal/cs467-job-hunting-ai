@@ -12,12 +12,21 @@ Follow-up prompt: Address PR review feedback by displaying
 field-level FastAPI validation errors from error.details instead
 of only showing the generic "Request validation failed" message.
 
+Follow-up prompt: Show non-blocking warnings next to unmatched job titles
+and locations using the shared matching helper and full postings dataset.
+
+Follow-up prompt: Preserve strict_location, strict_workplace,
+and strict_salary introduced in main when loading and saving
+search preferences without adding new UI controls.
+
 Reviewed and adapted for the CS467 Job Hunting AI project.
 */
 
 import { useEffect, useState } from "react";
 import { Plus, Save, X } from "lucide-react";
 import { apiFetch } from "../api";
+import { jobPostings } from "../data/jobPostings";
+import { getPreferenceWarnings } from "../data/preferenceMatching";
 
 const WORKPLACE_OPTIONS = [
   { value: "remote", label: "Remote" },
@@ -33,6 +42,9 @@ const DEFAULT_PREFERENCES = {
   salary_max: null,
   salary_currency: "USD",
   result_count: 20,
+  strict_location: false,
+  strict_workplace: false,
+  strict_salary: false,
 };
 
 // JH-021: Show field-level API validation errors.
@@ -355,6 +367,14 @@ export default function SearchPreferencesForm() {
               preferences.salary_currency,
             result_count:
               preferences.result_count,
+
+            // Preserve strict preferences introduced in main.
+            strict_location:
+              preferences.strict_location,
+            strict_workplace:
+              preferences.strict_workplace,
+            strict_salary:
+              preferences.strict_salary,
           }),
         }
       );
@@ -396,6 +416,12 @@ export default function SearchPreferencesForm() {
     }
   }
 
+  // JH-021 PR review fix:
+  // Check each preference against the full postings dataset.
+  // Warnings do not prevent users from saving their preferences.
+  const { unmatchedTitles, unmatchedLocations } =
+    getPreferenceWarnings(jobPostings, preferences);
+
   return (
     <section className="profile-form-card search-preferences-card">
       <h2>Job Search Preferences</h2>
@@ -419,26 +445,39 @@ export default function SearchPreferencesForm() {
             <div className="profile-skills-list">
               {preferences.job_titles.map(
                 (title) => (
-                  <span
-                    className="profile-skill-tag"
+                  <div
+                    className="preference-entry"
                     key={title}
                   >
-                    {title}
+                    <span className="profile-skill-tag">
+                      {title}
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeEntry(
-                          "job_titles",
-                          title
-                        )
-                      }
-                      aria-label={`Remove ${title}`}
-                      disabled={saving}
-                    >
-                      <X size={14} />
-                    </button>
-                  </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeEntry(
+                            "job_titles",
+                            title
+                          )
+                        }
+                        aria-label={`Remove ${title}`}
+                        disabled={saving}
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+
+                    {unmatchedTitles.includes(title) && (
+                      <p
+                        className="preference-warning"
+                        role="status"
+                      >
+                        No current postings match “{title}”.
+                        Check the spelling or keep it for
+                        future postings.
+                      </p>
+                    )}
+                  </div>
                 )
               )}
             </div>
@@ -499,26 +538,39 @@ export default function SearchPreferencesForm() {
             <div className="profile-skills-list">
               {preferences.locations.map(
                 (location) => (
-                  <span
-                    className="profile-skill-tag"
+                  <div
+                    className="preference-entry"
                     key={location}
                   >
-                    {location}
+                    <span className="profile-skill-tag">
+                      {location}
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeEntry(
-                          "locations",
-                          location
-                        )
-                      }
-                      aria-label={`Remove ${location}`}
-                      disabled={saving}
-                    >
-                      <X size={14} />
-                    </button>
-                  </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeEntry(
+                            "locations",
+                            location
+                          )
+                        }
+                        aria-label={`Remove ${location}`}
+                        disabled={saving}
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+
+                    {unmatchedLocations.includes(location) && (
+                      <p
+                        className="preference-warning"
+                        role="status"
+                      >
+                        No current postings match “{location}”.
+                        Check the spelling or keep it for
+                        future postings.
+                      </p>
+                    )}
+                  </div>
                 )
               )}
             </div>

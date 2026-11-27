@@ -14,6 +14,13 @@ import App from "./App";
 // job postings, local filters cannot bypass saved restrictions,
 // preference loading errors do not expose unrestricted results,
 // and anonymous browsing continues to work.
+//
+// Follow-up prompt: Verify unmatched saved preference warnings,
+// continued filtering when some preferences match, incompatible
+// combinations of individually valid preferences, and independent
+// matching against all current postings.
+//
+// Reviewed and adapted for the CS467 Job Hunting AI project.
 
 const apiFetch = vi.fn();
 
@@ -236,5 +243,224 @@ describe("JH-021 saved search preferences integration", () => {
     ).toBeInTheDocument();
 
     expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  // GenAI attribution:
+  // Developed with assistance from ChatGPT (OpenAI).
+  // Prompt: Test Job Postings warnings for unmatched saved values,
+  // incompatible saved preferences, independent validation against
+  // the full dataset, and empty results caused by local filters.
+  // Reviewed and adapted for the CS467 Job Hunting AI project.
+
+  it("shows unmatched saved values even when other preferences return results", async () => {
+    apiFetch.mockResolvedValue(
+      mockResponse({
+        ...remoteOnlyPreferences,
+        job_titles: [
+          "Data Analyst",
+          "Software Engineer",
+        ],
+        locations: [
+          "Remote",
+          "Portland, OR",
+        ],
+      })
+    );
+
+    render(<App />);
+
+    await screen.findByText("test@example.com");
+
+    await openJobPostings();
+
+    expect(
+      await screen.findByText(
+        /No current postings match your saved job title “Software Engineer”/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        /No current postings match your saved location “Portland, OR”/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Data Analyst")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Frontend Developer")
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Product Designer")
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByText("1 results")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match all your saved preferences/
+      )
+    ).not.toBeInTheDocument();
+  });
+
+  it("explains when individually valid saved preferences have no combined matches", async () => {
+    apiFetch.mockResolvedValue(
+      mockResponse({
+        ...remoteOnlyPreferences,
+        job_titles: ["Frontend Developer"],
+        locations: ["New York, NY"],
+        workplace_type: [],
+      })
+    );
+
+    render(<App />);
+
+    await screen.findByText("test@example.com");
+
+    await openJobPostings();
+
+    expect(
+      await screen.findByText(
+        /No current postings match all your saved preferences/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("0 results")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved job title/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved location/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Frontend Developer")
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Product Designer")
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Data Analyst")
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not mark a valid city as unmatched because of remote-only restrictions", async () => {
+    apiFetch.mockResolvedValue(
+      mockResponse({
+        ...remoteOnlyPreferences,
+        job_titles: ["Frontend Developer"],
+        locations: ["San Francisco, CA"],
+        workplace_type: ["remote"],
+      })
+    );
+
+    render(<App />);
+
+    await screen.findByText("test@example.com");
+
+    await openJobPostings();
+
+    expect(
+      await screen.findByText(
+        /No current postings match all your saved preferences/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved location/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved job title/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByText("0 results")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Frontend Developer")
+    ).not.toBeInTheDocument();
+  });
+
+  it("distinguishes empty local search results from incompatible saved preferences", async () => {
+    render(<App />);
+
+    await screen.findByText("test@example.com");
+
+    const user = await openJobPostings();
+
+    await screen.findByText(
+      /Your saved job search preferences are applied/
+    );
+
+    expect(
+      screen.getByText("Data Analyst")
+    ).toBeInTheDocument();
+
+    const searchInput = screen.getByLabelText("Job title");
+
+    await user.type(searchInput, "Frontend Developer");
+
+    expect(
+      screen.getByText("0 results")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        /No matching jobs. Try changing your search or filters/
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match all your saved preferences/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved job title/
+      )
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText(
+        /No current postings match your saved location/
+      )
+    ).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
+
+    expect(
+      screen.getByText("Data Analyst")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("1 results")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Frontend Developer")
+    ).not.toBeInTheDocument();
   });
 });
