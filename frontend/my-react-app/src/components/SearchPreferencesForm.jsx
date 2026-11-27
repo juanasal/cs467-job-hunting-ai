@@ -19,6 +19,12 @@ Follow-up prompt: Preserve strict_location, strict_workplace,
 and strict_salary introduced in main when loading and saving
 search preferences without adding new UI controls.
 
+Follow-up prompt (JH-022): Integrate annual USD salary
+range and maximum recommendation count controls.
+Validate values before saving, serialize optional salaries
+as decimal strings or null, and send result_count as an integer.
+Preserve existing JH-021 behavior and strict preference flags.
+
 Reviewed and adapted for the CS467 Job Hunting AI project.
 */
 
@@ -27,6 +33,11 @@ import { Plus, Save, X } from "lucide-react";
 import { apiFetch } from "../api";
 import { jobPostings } from "../data/jobPostings";
 import { getPreferenceWarnings } from "../data/preferenceMatching";
+import PreferenceLimitFields from "./PreferenceLimitFields";
+import {
+  validatePreferenceLimits,
+  serializeSalary,
+} from "../data/preferenceLimits";
 
 const WORKPLACE_OPTIONS = [
   { value: "remote", label: "Remote" },
@@ -319,6 +330,16 @@ export default function SearchPreferencesForm() {
     }));
   }
 
+  // JH-022: Update salary and result-count fields.
+  function updatePreferenceLimit(field, value) {
+    clearFeedback();
+
+    setPreferences((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
   async function handleSave(event) {
     event.preventDefault();
     clearFeedback();
@@ -341,6 +362,14 @@ export default function SearchPreferencesForm() {
       return;
     }
 
+    // JH-022: Validate salary bounds and recommendation count.
+    const limitError = validatePreferenceLimits(preferences);
+
+    if (limitError) {
+      setError(limitError);
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -360,13 +389,13 @@ export default function SearchPreferencesForm() {
             workplace_type:
               preferences.workplace_type,
             salary_min:
-              preferences.salary_min,
+              serializeSalary(preferences.salary_min),
             salary_max:
-              preferences.salary_max,
+              serializeSalary(preferences.salary_max),
             salary_currency:
               preferences.salary_currency,
             result_count:
-              preferences.result_count,
+              Number(preferences.result_count),
 
             // Preserve strict preferences introduced in main.
             strict_location:
@@ -436,7 +465,7 @@ export default function SearchPreferencesForm() {
           Loading search preferences...
         </p>
       ) : (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} noValidate>
           <div className="profile-form-field">
             <label htmlFor="preference-title-input">
               Preferred Job Titles
@@ -662,6 +691,12 @@ export default function SearchPreferencesForm() {
               )}
             </div>
           </fieldset>
+
+          <PreferenceLimitFields
+            preferences={preferences}
+            onChange={updatePreferenceLimit}
+            disabled={saving}
+          />
 
           {error && (
             <p
