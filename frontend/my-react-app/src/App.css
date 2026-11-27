@@ -282,6 +282,52 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   margin-top: 8px;
 }
 
+/* JH-021 Search Preferences */
+
+.search-preferences-card {
+  margin-top: 24px;
+}
+
+.preference-workplace-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 24px;
+  min-width: 0;
+}
+
+.preference-workplace-fieldset legend {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.preference-workplace-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 16px;
+}
+
+.preference-workplace-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.preference-workplace-options input {
+  width: 17px;
+  height: 17px;
+  accent-color: #2563eb;
+}
+
+.preference-workplace-options input:disabled {
+  cursor: not-allowed;
+}
+
 .auth-backdrop { z-index: 60; }
 .auth-card {
   position: relative;
@@ -404,4 +450,51 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   background: #eaf7ee;
   border: 1px solid #9dcbaa;
   color: #245d35;
+}
+
+/*
+GenAI attribution:
+Developed with assistance from ChatGPT (OpenAI).
+Prompt: Style non-blocking search preference warnings
+with accessible contrast and responsive layout.
+*/
+
+.preference-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preference-entry:has(.preference-warning) {
+  flex-basis: 100%;
+}
+
+.preference-warning {
+  margin: 0;
+  padding: 8px 12px;
+  color: #854d0e;
+  background-color: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/*
+GenAI attribution:
+Developed with assistance from ChatGPT (OpenAI).
+Prompt: Add consistent spacing for saved preference warnings
+on the Job Postings page.
+Reviewed and adapted for the CS467 Job Hunting AI project.
+*/
+
+.preference-warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 16px;
 }
