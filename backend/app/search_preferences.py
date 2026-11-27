@@ -13,7 +13,7 @@ from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
 from pymysql.err import IntegrityError
 
 from app.authentication import (
@@ -43,6 +43,9 @@ class SearchPreferencesData(BaseModel):
     salary_max: Decimal | None = None
 
     salary_currency: Literal["USD"] = "USD"
+    strict_location: StrictBool = False
+    strict_workplace: StrictBool = False
+    strict_salary: StrictBool = False
 
     result_count: int = Field(
         default=20,
@@ -149,6 +152,9 @@ def load_preferences(conn, user_id):
             salary_min,
             salary_max,
             salary_currency,
+            strict_location,
+            strict_workplace,
+            strict_salary,
             result_count
         FROM search_preferences
         WHERE user_id = %s
@@ -206,6 +212,9 @@ def load_preferences(conn, user_id):
         salary_min=row["salary_min"],
         salary_max=row["salary_max"],
         salary_currency=row["salary_currency"],
+        strict_location=bool(row["strict_location"]),
+        strict_workplace=bool(row["strict_workplace"]),
+        strict_salary=bool(row["strict_salary"]),
         result_count=row["result_count"],
     )
 
@@ -219,6 +228,9 @@ def preferences_changed(existing, incoming):
         "salary_min",
         "salary_max",
         "salary_currency",
+        "strict_location",
+        "strict_workplace",
+        "strict_salary",
         "result_count",
     )
 
@@ -291,13 +303,19 @@ def update_preferences(
                 salary_min,
                 salary_max,
                 salary_currency,
+                strict_location,
+                strict_workplace,
+                strict_salary,
                 result_count
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 salary_min = VALUES(salary_min),
                 salary_max = VALUES(salary_max),
                 salary_currency = VALUES(salary_currency),
+                strict_location = VALUES(strict_location),
+                strict_workplace = VALUES(strict_workplace),
+                strict_salary = VALUES(strict_salary),
                 result_count = VALUES(result_count)
             """,
             (
@@ -305,6 +323,9 @@ def update_preferences(
                 preferences.salary_min,
                 preferences.salary_max,
                 preferences.salary_currency,
+                preferences.strict_location,
+                preferences.strict_workplace,
+                preferences.strict_salary,
                 preferences.result_count,
             ),
         )

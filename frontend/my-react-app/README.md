@@ -63,7 +63,8 @@ OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, c
 The login-required requests and private pages (JH-014: `src/api.js`, the private page and session-expiry handling in `src/App.jsx`, the `apiFetch` changes in `src/components/ProfileForm.jsx`, the `notice` prop in `src/components/LoginForm.jsx`, the `.auth-notice` style in `src/App.css`, and the "Requests that need login" section of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y](https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y) documents the GenAI interaction that led to my code.
 
 ## How to Run
-1. Navigate to frontend -> my-react-app
-2. npm install in terminal
-3. npm run dev in terminal
-4. Run site on http://localhost:5174/
+
+1. Start FastAPI on port `8000` using the [backend setup guide](../../backend/README.md#run-the-server). The Vite dev server proxies `/api/` requests to `http://127.0.0.1:8000`.
+2. From `frontend/my-react-app/`, run `npm ci` and then `npm run dev`.
+3. Open the URL Vite prints. It typically starts on `http://localhost:5173` and may select another port if that one is busy.
+4. Add the exact browser origin, including its port, to `FRONTEND_ORIGINS` in `backend/.env` and restart FastAPI if the setting changed. This allows requests that require a trusted Origin.

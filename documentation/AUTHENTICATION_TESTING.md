@@ -19,7 +19,9 @@ The current authentication test suite covers:
 5. Registration creates exactly one account, stores a password hash instead of the password, and never returns either.
 6. Duplicate and invalid registration requests are rejected with a useful error.
 
-The implementation also enforces a 30-minute idle timeout, but the tests above do not directly test that timeout.
+The suite also covers the 30-minute idle timeout boundary, absolute expiration,
+activity refresh, production cookie settings, and logout failure and session
+isolation cases.
 
 ## 2. Create the test database and MySQL user
 
@@ -82,11 +84,10 @@ In MySQL Workbench, select the test database:
 USE job_hunting_ai_test;
 ```
 
-Execute the migration files in order:
-
-1. `backend/db/migrations/001_create_tables.sql`
-2. `backend/db/migrations/002_add_jobs_first_seen_at.sql`
-3. `backend/db/migrations/003_create_user_sessions.sql`
+Execute all migrations in the order shown in the
+[database setup guide](../backend/db/README.md#set-up-a-new-development-database).
+The full backend suite uses the complete schema, including match recalculation
+and strict preference fields.
 
 Make sure `job_hunting_ai_test` is the active schema before executing each migration.
 
@@ -149,21 +150,9 @@ From the `backend` directory, run:
 python -m pytest tests/test_auth.py -v -s
 ```
 
-The test file should run these tests:
-
-- `test_auth_full_lifecycle`
-- `test_login_wrong_password`
-- `test_altered_session_cookie`
-- `test_expired_session`
-- `test_register_creates_one_account_with_hashed_password`: one `users` row is created, it stores an Argon2id hash (not the password), and the response contains neither
-- `test_register_duplicate_email_rejected`: the same email in different case or with spaces gets `409` and no second row
-- `test_register_invalid_request_rejected` (runs 4 cases): an invalid email, a short password, a missing password, or a missing email gets `422` with a message naming the problem, does not echo the password, and creates no account
-
-A successful run should end with a summary similar to:
-
-```text
-10 passed
-```
+See [test_auth.py](../backend/tests/test_auth.py) for the current cases. Check
+the pytest summary for skipped tests to confirm that the MySQL integration
+tests ran.
 
 To run the entire backend test suite:
 
@@ -225,7 +214,8 @@ USE job_hunting_ai_test;
 SHOW TABLES;
 ```
 
-Then execute the three migrations in numerical order.
+Then apply any missing migrations in the order listed in the
+[database setup guide](../backend/db/README.md#set-up-a-new-development-database).
 
 ### Tests connect to the wrong database
 

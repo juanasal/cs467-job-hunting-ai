@@ -1,6 +1,6 @@
-# Exact-match scoring baseline
+# Job qualification scoring
 
-This baseline compares a person's skills, education, and experience with the
+The scorer compares a person's skills, education, and experience with the
 qualifications listed in a job. It returns a score from 0 to 100 and explains which
 qualifications matched, which did not, and where information was missing. Skills can
 contribute up to 80 points; education and experience can each contribute up to 10.
@@ -8,15 +8,15 @@ The same inputs always produce the same result.
 
 The caller supplies structured qualifications alongside the job record. The rule-based
 extractor below can build those qualifications from the job's description. The scorer
-matches skill names exactly after standardizing capitalization and spacing,
-so related names such as `React` and `React.js` do not count as a match.
+matches normalized skill names exactly and can give partial credit for documented
+one-way skill relationships.
 
 The score describes how well the profile matches the available qualification evidence.
 It is not a chance of being hired, and it does not check preferences such as salary,
 location, or remote work. Missing information earns no points, but does not prove that
 the person lacks a qualification.
 
-`app.job_matching.score_job(profile, job, *, requirements)` is a pure backend
+`app.job_matching.score_job(profile, job, *, requirements, method_version="related-v1")` is a pure backend
 qualification calculation. It accepts shared profile/job dictionaries and explicit
 `PreparedRequirements`, returning a dictionary. There are no network, database, HTTP,
 clock, or AI dependencies.
@@ -24,10 +24,10 @@ clock, or AI dependencies.
 ## Decision and boundaries
 
 The `exact-v1` baseline adopts the qualification rules in the
-[matching design](decisions/matching.md), including unspecified priorities, with
-preference filtering assigned to a separate layer. Filtering policy, related-skill
-credit, and the public diagnostics schema remain proposals.
-The [shared contract](DATA_CONTRACT.md) is unchanged.
+[matching design](decisions/matching.md), including unspecified priorities.
+JH-036 adds `related-v1`, the default method. Pass `method_version="exact-v1"`
+to reproduce baseline scoring. The public diagnostics schema remains a proposal.
+Saved strictness and annual salary fields follow the [shared contract](DATA_CONTRACT.md).
 
 The module uses dictionaries consistently with the job normalizer and repository;
 there is no shared profile/job Python model.
@@ -37,12 +37,42 @@ shared-record fields upstream. Invalid scoring inputs raise `ValueError`, produc
 score. Missing required profile fields are invalid, rather than silently treated as a
 valid incomplete profile. Valid `other` education is unevaluable.
 
-A score makes no inclusion/exclusion decision. No preference points, filter, ranking,
-persistence, endpoint, or frontend control is added. A zero score is qualification
-alignment of zero; it never means a confirmed preference exclusion. Future assembly
-must evaluate preferences separately and keep exclusions distinct from scores and
-unknown compatibility. Until then results must not be presented as eligible or fully
-compatible recommendations.
+Call `app.match_evaluation.evaluate_match(profile, job, preferences, requirements=prepared)`
+with the saved JH-018 preference record to combine qualification fit with eligibility.
+The internal result gives each preference's status and returns qualification points for
+eligible jobs. Confirmed strict mismatches produce exclusion reasons. Soft mismatches
+and unverified preferences leave the qualification score unchanged.
+
+## Ranking and explaining recommendations
+
+Call `app.match_evaluation.recommend_jobs(profile, jobs, preferences)` with the shared
+profile, an iterable of normalized, persisted jobs with unique job IDs, and the saved
+search preferences record. The function extracts and prepares requirements, then uses
+the existing preference evaluation and qualification score for each candidate.
+
+- Eligible jobs are ordered by descending final (rounded) `match_score`. Ties use
+  ascending `job_id`, regardless of candidate order. The saved `result_count` is applied
+  after sorting and limits recommendations within the supplied candidate pool.
+- Strict preference mismatches exclude jobs. Soft mismatches and unverified preferences
+  are explained when relevant and leave the score unchanged. Job titles still guide
+  collection. The explanation reports location, workplace, and salary comparisons
+  when the user has specified those preferences.
+- Each recommendation uses deterministic text templates backed by the scoring
+  diagnostics. They describe direct skills, related skills earning partial credit,
+  skill targets without matching profile evidence, education and experience comparisons,
+  and known uncertainties such as incomplete descriptions. A known level shortfall
+  refers to the recorded level. An unmatched skill means matching evidence was unavailable
+  in the profile.
+- Missing or invalid required profile data yields an empty list. Jobs missing required
+  matching data, such as a usable description or persisted ID, are skipped. Optional
+  unavailable job fields are handled by the preference evaluator. Empty candidate pools
+  and pools without eligible jobs return an empty list.
+
+The ordered list contains dictionaries with `user_id`, `job_id`, `match_score`,
+`matched_skills`, and `match_explanation`. `matched_skills` uses credited profile
+skill names, including sources of related matches. The caller supplies `created_at`
+if persisting these records under the [Match Result contract](DATA_CONTRACT.md#5-match-result).
+This is a backend function with no network or database calls.
 
 ## Extracting requirements from job descriptions
 
@@ -176,12 +206,20 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
 
 ## Implemented rules
 
-- Skills: 80 × matched weight / total weight; no targets yields zero. Exact matches
-  earn full target credit. Required/preferred/unspecified weights are 2/1/0.5.
+- Skills: 80 × sum of (target weight × credit) / total target weight. With no
+  targets the skill score is zero. Exact matches earn 1 in both methods.
+  Required/preferred/unspecified weights are 2/1/0.5.
 - Unicode NFKC, casefold, trim and collapse whitespace; punctuation stays distinct
-  (`C`, `C++`, `C#`). No aliases, substrings, stemming, or related-skill credit.
-- Count each normalized profile skill/target once. Highest target priority wins.
-  Matched profile strings retain their first original spelling, sorted by normalized name.
+  (`C`, `C++`, `C#`). Matching uses whole normalized names.
+- `related-v1` gives 0.75 for React → UI development, PostgreSQL → SQL, and
+  TypeScript → JavaScript. Java → C# earns zero per the matching design.
+  Unlisted pairs earn zero. The lookup uses only direct edges from profile skills.
+- The highest credit wins per target. Equal-credit sources are resolved by normalized
+  alphabetical order. Each credited target's explanation names the source skill and
+  job requirement and includes the job evidence.
+- Count each normalized target once at its highest priority. One profile skill can
+  support multiple distinct targets. `matched_skills` lists each credited profile
+  skill once, retaining its first original spelling and sorting by normalized name.
 - Education: high_school < associate < bachelor < master < doctorate. Experience:
   entry < mid < senior. Meeting/exceeding required/preferred/unspecified minima earns
   10/5/2.5 points. Known shortfall, unknown requirements, and unevaluable education earn
@@ -197,13 +235,27 @@ that preferences have not been evaluated. All ordering is stable. Inputs are unc
 From `backend/` with dependencies installed:
 
 ```bash
-python -m pytest tests/test_job_requirements.py tests/test_job_matching.py -q
+python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q
 python -m pytest -q
 ```
 
-Tests use synthetic shared records and hand-authored requirements with independently
-calculated scores, including the matching design’s strong/unrelated, partial-description,
-and weighting examples. They test baseline expectations rather than future related-skill expectations.
+Tests compare both methods using the same synthetic profiles and extracted requirements.
+The first seven cases each have one required skill target. The last case has required
+PostgreSQL and Docker, with preferred SQL. All cases lack education and experience targets.
+
+| Profile skills | Job skills | `exact-v1` | `related-v1` |
+| --- | --- | ---: | ---: |
+| React | UI development | 0 | 60 |
+| PostgreSQL | SQL | 0 | 60 |
+| TypeScript | JavaScript | 0 | 60 |
+| Python | UI development | 0 | 0 |
+| UI development | React | 0 | 0 |
+| Java | C# | 0 | 0 |
+| React, UI development | UI development | 80 | 80 |
+| PostgreSQL | PostgreSQL, SQL, Docker | 32 | 44 |
+
+The JH-036 validation run passed all 53 matching and requirement-extraction tests,
+including the comparisons above.
 
 This measures alignment with visible qualifications, not hiring probability or verified
 proficiency. Exact matching misses related skills and spelling variants. Incomplete
@@ -211,8 +263,3 @@ source snippets omit qualifications; missing evidence earns zero and must not be
 proof of inability. Sparse requirements can also inflate visible skill coverage: one
 matched target can outscore four of five matched targets. Component coverage does not
 measure description completeness or confidence.
-
-JH-036 remains responsible for a separately versioned related-skill method and its
-evaluation. Preference policy and its
-supporting contract gaps, recommendation assembly, ranking, and public diagnostic output
-remain separate work; this baseline resolves none of those proposals silently.

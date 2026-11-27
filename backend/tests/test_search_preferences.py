@@ -444,9 +444,13 @@ def test_reordered_lists_preserve_preferences(preferences_client):
 # Reviewed and adapted for the CS467 Job Hunting AI project.
 
 
-def test_preferences_change_marks_matches_for_recalculation(
-    preferences_client,
-):
+@pytest.mark.parametrize("change", [
+    {"job_titles": ["Backend Developer"]},
+    {"strict_location": True},
+    {"strict_workplace": True},
+    {"strict_salary": True},
+])
+def test_preferences_change_marks_matches_for_recalculation(preferences_client, change):
     """Changing preferences flags only the current user's matches."""
     client = preferences_client
     user_a, email_a, headers_a = register_and_login(client)
@@ -568,12 +572,15 @@ def test_preferences_change_marks_matches_for_recalculation(
     }
 
     # Changing A's preferences must flag only A's matches.
-    updated_data = sample_preferences(
-        job_titles=["Backend Developer"]
-    )
+    updated_data = sample_preferences(**change)
 
     response = save_preferences(client, headers_a, updated_data)
     assert response.status_code == 200, response.text
+
+    response = client.get(PREFERENCES_URL)
+    assert response.status_code == 200, response.text
+    for flag in ("strict_location", "strict_workplace", "strict_salary"):
+        assert response.json()[flag] is change.get(flag, False)
 
     assert read_flags() == {
         user_a: 1,

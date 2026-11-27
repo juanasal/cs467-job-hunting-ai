@@ -399,3 +399,55 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
     width: 100%;
   }
 }
+
+/*
+ * JH-020: Profile completion guidance.
+ * GenAI attribution: Developed with ChatGPT (OpenAI).
+ * Prompt: Style incomplete and completed profile feedback
+ * using accessible colors and the existing application UI.
+ * Reviewed and adapted for the CS467 project.
+ */
+
+.profile-completion-notice,
+.profile-completion-success {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-completion-notice {
+  background: #fff8e8;
+  border: 1px solid #e5c77a;
+  color: #694b12;
+}
+
+.profile-completion-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.profile-completion-notice p {
+  margin: 0 0 8px;
+}
+
+.profile-completion-notice ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.profile-completion-notice li + li {
+  margin-top: 4px;
+}
+
+.profile-completion-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eaf7ee;
+  border: 1px solid #9dcbaa;
+  color: #245d35;
+}

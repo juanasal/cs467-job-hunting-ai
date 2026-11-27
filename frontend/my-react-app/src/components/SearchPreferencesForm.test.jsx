@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /*
 GenAI attribution:
 Developed with assistance from ChatGPT (OpenAI).
