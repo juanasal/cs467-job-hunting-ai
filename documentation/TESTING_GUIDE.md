@@ -162,6 +162,14 @@ The recommendation tests in `test_match_evaluation.py` also check descending
 scores, stable job-ID tie-breaking, result limits after sorting, repeated
 results, evidence-based explanations, and empty or incomplete inputs.
 
+`backend/tests/test_recommendations.py` uses MySQL to test `GET /api/recommendations`
+and `GET /api/jobs/{job_id}`: login required, an empty feed, contract fields,
+score order with job-ID tie-breaking, the saved `result_count` limit, dismissed
+jobs hidden while saved and applied jobs stay, inactive jobs hidden from the feed
+but still returned by job details, job details with and without a match, unknown
+and invalid job IDs, and that users can't see each other's match data. Apply
+migration `005_add_jobs_is_active.sql` before running these tests.
+
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.
 - Cover missing job data, empty skills, duplicate skills, and case normalization where supported.

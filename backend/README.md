@@ -169,6 +169,71 @@ Run the tracking tests (they need the `TEST_DB_*` settings, see below) from the 
 python -m pytest tests/test_tracking.py -v
 ```
 
+## Recommendations and job details API
+
+`app/recommendations.py` returns the signed-in user's saved match results and job details. Both routes require login, and the user always comes from the session cookie (a `user_id` in the request is ignored), so users only ever see their own match data.
+
+These routes read results already stored in `match_results` and `match_result_skills`; they do not run the matcher. Running matching and saving results for the API is JH-051. Until then, results come from `db/seed/dev_seed.sql` or rows inserted by hand.
+
+| Route | Result |
+| --- | --- |
+| `GET /api/recommendations` | `{"recommendations": [{"job": {...}, "match": {...}}, ...]}`, best match first |
+| `GET /api/jobs/{job_id}` | `{"job": {...}, "match": {...}}`, where `match` is `null` when the user has no saved result for that job |
+
+`job` has the [Job Posting](../documentation/DATA_CONTRACT.md#4-job-posting) fields and `match` has the [Match Result](../documentation/DATA_CONTRACT.md#5-match-result) fields:
+
+```json
+{
+  "recommendations": [
+    {
+      "job": {
+        "job_id": 1001,
+        "external_job_id": "ADZ-123456",
+        "source": "adzuna",
+        "title": "Junior Software Engineer",
+        "company": "Example Corp",
+        "location": "Portland, OR",
+        "workplace_type": "hybrid",
+        "salary_min": 75000,
+        "salary_max": 90000,
+        "salary_currency": "USD",
+        "salary_is_predicted": false,
+        "description": "We are seeking a software engineer with Python and SQL experience.",
+        "date_posted": "2026-10-18",
+        "job_url": "https://example.com/jobs/123456",
+        "retrieved_at": "2026-10-19T18:30:00Z",
+        "first_seen_at": "2026-10-19T18:30:00Z",
+        "is_active": true
+      },
+      "match": {
+        "user_id": 1,
+        "job_id": 1001,
+        "match_score": 80,
+        "matched_skills": ["Python", "SQL"],
+        "match_explanation": "Direct skill matches include Python, SQL. ...",
+        "created_at": "2026-10-19T18:35:00Z"
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- **Order:** highest `match_score` first; ties go to the lower `job_id` (the same rule as `recommend_jobs`).
+- **Limit:** the user's saved `result_count`, or 20 if they haven't saved search preferences.
+- **Dismissed jobs** are left out of the feed (see [Job tracking API](#job-tracking-api)). Saved and applied jobs stay. Job details still work for a dismissed job.
+- **Inactive jobs** (`is_active = false`) are left out of the feed. Job details still returns them, with `is_active: false`, so saved and applied jobs can still be opened. Nothing marks jobs inactive automatically yet (see `db/README.md`).
+- **Stale results:** rows with `needs_recalculation = TRUE` are still returned until JH-051 recalculates them.
+- **Empty results** return `200` with `{"recommendations": []}`.
+- **Errors:** an unknown job ID returns `404` (`"Job not found."`), an invalid ID (`0`, `abc`) returns `422`, and requests without a valid session return `401`, all in the standard [error format](#error-format).
+
+Run the tests (they need the `TEST_DB_*` settings, see below) from the `backend/` directory:
+
+```bash
+python -m pytest tests/test_recommendations.py -v
+```
+
 ## Run the server
 
 ```bash
@@ -241,6 +306,7 @@ docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_add_match_results_recalculation_flag.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_create_user_sessions.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/004_add_strict_preferences.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/005_add_jobs_is_active.sql
 ```
 
 Migration `003_add_match_results_recalculation_flag.sql` is introduced by JH-017; these instructions assume that change has been merged. After pulling changes, also apply any later migrations present in `db/migrations/`, in numerical order. Do not reapply migrations already run against this database. No seed data is required for the tests.
@@ -427,3 +493,5 @@ The database helpers (JH-006: `app/db.py`, the `DB_SSL_CA` setting in `app/confi
 The access control tests (JH-011: `tests/test_access_control.py`, the `TEST_DB_*` settings in `.github/workflows/ci.yml`, and the related updates to `documentation/AUTHENTICATION_TESTING.md`, `documentation/CI_GUIDE.md`, and `documentation/TESTING_GUIDE.md`) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX](https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX) documents the GenAI interaction that led to my code.
 
 The registration tests (JH-009: the registration tests in `tests/test_auth.py` and the related updates to `documentation/AUTHENTICATION_TESTING.md`) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/HTwKKJGpPc4Pj9i6zh3rrX](https://claude.ai/artifact/HTwKKJGpPc4Pj9i6zh3rrX) documents the GenAI interaction that led to my code.
+
+The recommendations and job details API (JH-041: `app/recommendations.py`, the router registration in `app/main.py`, `tests/test_recommendations.py`, `db/migrations/005_add_jobs_is_active.sql` and its step in `.github/workflows/ci.yml`, the recommendations and job details API section of this README, and the related updates to `db/README.md`, `documentation/DATA_CONTRACT.md`, and `documentation/TESTING_GUIDE.md`) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/EXzzqUxUhQVS5W6WbbnsxM](https://claude.ai/artifact/EXzzqUxUhQVS5W6WbbnsxM) documents the GenAI interaction that led to my code.
