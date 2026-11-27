@@ -162,13 +162,22 @@ The recommendation tests in `test_match_evaluation.py` also check descending
 scores, stable job-ID tie-breaking, result limits after sorting, repeated
 results, evidence-based explanations, and empty or incomplete inputs.
 
-`backend/tests/test_recommendations.py` uses MySQL to test `GET /api/recommendations`
-and `GET /api/jobs/{job_id}`: login required, an empty feed, contract fields,
-score order with job-ID tie-breaking, the saved `result_count` limit, dismissed
-jobs hidden while saved and applied jobs stay, inactive jobs hidden from the feed
-but still returned by job details, job details with and without a match, unknown
-and invalid job IDs, and that users can't see each other's match data. Apply
-migration `005_add_jobs_is_active.sql` before running these tests.
+`backend/tests/test_recommendations.py` uses MySQL to verify that
+`GET /api/recommendations` ranks and explains stored jobs, including a manually
+imported posting. It covers changes to saved skills and workplace preferences,
+score order with job-ID tie-breaking, the saved result limit, tracking and
+activity filters, and empty feeds with insufficient profile information or
+pending or failed ingestion. It also checks that committed jobs remain
+available after a source failure. The tests for `GET /api/jobs/{job_id}` cover
+job details with and without a match, inactive jobs, unknown and invalid IDs,
+and user isolation. Both routes are tested for required authentication.
+Apply all database migrations, including `004_add_strict_preferences.sql`
+and `005_add_jobs_is_active.sql`, before running the MySQL tests.
+
+The same file includes an endpoint test with stubbed database inputs that
+checks live ranking, explanations, empty responses, and zero external source
+calls. `backend/tests/test_saved_search_pipeline.py` checks that a source
+failure after a successful page occurs before ingestion opens a write transaction.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.

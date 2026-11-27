@@ -152,7 +152,7 @@ These tests cover inserting new jobs, updating existing jobs, preventing duplica
 - Unknown job IDs return `404`. Invalid IDs or statuses, or an extra field like `user_id` in the body, return `422`. Undoing a job the user hasn't tracked returns `404`.
 - `applied` only records what the user says they did. The app does not submit job applications.
 
-**Dismissed jobs and the feed:** the regular recommendations feed must leave out any job the signed-in user has dismissed. Saved and applied jobs stay in the feed. The feed query should filter with:
+**Dismissed jobs and the feed.** The recommendations feed excludes jobs the signed-in user has dismissed. Saved and applied jobs remain candidates for ranking when they pass the job activity and preference checks. The feed filters dismissals with this SQL:
 
 ```sql
 AND NOT EXISTS (
@@ -171,14 +171,14 @@ python -m pytest tests/test_tracking.py -v
 
 ## Recommendations and job details API
 
-`app/recommendations.py` returns the signed-in user's saved match results and job details. Both routes require login, and the user always comes from the session cookie (a `user_id` in the request is ignored), so users only ever see their own match data.
+`app/recommendations.py` ranks stored jobs for the signed-in user. Both routes require login and use the session cookie to select the user. A `user_id` in the request is ignored.
 
-These routes read results already stored in `match_results` and `match_result_skills`; they do not run the matcher. Running matching and saving results for the API is JH-051. Until then, results come from `db/seed/dev_seed.sql` or rows inserted by hand.
+The feed loads the user's saved skills, education, experience, and search preferences from MySQL. It reads active jobs from any import source, including manual imports, and excludes jobs the user dismissed. The existing matcher extracts requirements, evaluates preferences, scores qualification fit (including related skills), and explains each result. Changes to saved matching inputs and stored jobs take effect on the next request.
 
 | Route | Result |
 | --- | --- |
 | `GET /api/recommendations` | `{"recommendations": [{"job": {...}, "match": {...}}, ...]}`, best match first |
-| `GET /api/jobs/{job_id}` | `{"job": {...}, "match": {...}}`, where `match` is `null` when the user has no saved result for that job |
+| `GET /api/jobs/{job_id}` | `{"job": {...}, "match": {...}}`, with a current match for a scorable, eligible active job or `null` when no match is available. When current matching inputs are unavailable or the job is inactive, details can return the user's previously saved match. |
 
 `job` has the [Job Posting](../documentation/DATA_CONTRACT.md#4-job-posting) fields and `match` has the [Match Result](../documentation/DATA_CONTRACT.md#5-match-result) fields:
 
@@ -221,11 +221,15 @@ These routes read results already stored in `match_results` and `match_result_sk
 Rules:
 
 - **Order:** highest `match_score` first; ties go to the lower `job_id` (the same rule as `recommend_jobs`).
-- **Limit:** the user's saved `result_count`, or 20 if they haven't saved search preferences.
-- **Dismissed jobs** are left out of the feed (see [Job tracking API](#job-tracking-api)). Saved and applied jobs stay. Job details still work for a dismissed job.
+- **Preferences.** The saved `result_count` applies after ranking. Strict location, workplace, and salary mismatches exclude a job. Soft mismatches and unverified values appear in the explanation. Saved titles guide explicit collection.
+- **Tracking.** Dismissed jobs are excluded from the feed. Saved and applied jobs remain eligible subject to job activity, preferences, and the result limit. Job details still work for a dismissed job. See the [Job tracking API](#job-tracking-api).
 - **Inactive jobs** (`is_active = false`) are left out of the feed. Job details still returns them, with `is_active: false`, so saved and applied jobs can still be opened. Nothing marks jobs inactive automatically yet (see `db/README.md`).
-- **Stale results:** rows with `needs_recalculation = TRUE` are still returned until JH-051 recalculates them.
-- **Empty results** return `200` with `{"recommendations": []}`.
+- **Evaluation time.** For current matches, `created_at` is the UTC evaluation time. The feed recomputes matches on each request and does not write match rows. It scans the eligible stored pool before applying the result limit.
+- **Insufficient profile or preferences.** The feed returns `200` with `{"recommendations": []}` when the user has no saved profile, no saved skills, no saved search preferences, or no saved job titles.
+- **No eligible jobs.** An empty job table, excluded jobs, or jobs without usable matching data return the same empty response.
+- **Pending ingestion.** The feed immediately returns matches from committed jobs, or the same empty response when none are eligible. This MVP has no ingestion status in the response.
+- **External source or ingestion failure.** The explicit `run_saved_search` caller receives the failure. Source failures happen before job writes, and failed writes roll back. The feed continues to use previously committed jobs or returns the same empty response. A failure reading MySQL uses the standard `500` error response.
+- **Collection limits.** Dashboard requests make zero Adzuna requests and start no ingestion. Explicit saved searches retain the existing limits of 10 queries, five pages per query, and 100 collected results. The Adzuna client uses a 10-second HTTP timeout setting and makes no automatic retries.
 - **Errors:** an unknown job ID returns `404` (`"Job not found."`), an invalid ID (`0`, `abc`) returns `422`, and requests without a valid session return `401`, all in the standard [error format](#error-format).
 
 Run the tests (they need the `TEST_DB_*` settings, see below) from the `backend/` directory:

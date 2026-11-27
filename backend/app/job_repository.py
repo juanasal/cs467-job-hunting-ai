@@ -1,4 +1,4 @@
-"""Save normalized job postings without creating duplicates.
+"""Store and retrieve normalized job postings.
 
 GenAI attribution:
 Developed with assistance from ChatGPT (OpenAI).
@@ -8,7 +8,7 @@ helpers, and the normalized Adzuna job data contract.
 
 from datetime import datetime, timezone
 
-from app.db import execute, fetch_one
+from app.db import execute, fetch_all, fetch_one
 
 
 JOB_FIELDS = (
@@ -27,6 +27,27 @@ JOB_FIELDS = (
     "job_url",
     "retrieved_at",
 )
+
+JOB_COLUMNS = ", ".join(
+    f"j.{field}" for field in ("job_id", *JOB_FIELDS, "first_seen_at", "is_active")
+)
+
+
+def load_recommendation_jobs(conn, user_id):
+    """Load active jobs the user has not dismissed, regardless of import source."""
+    return fetch_all(
+        conn,
+        f"""
+        SELECT {JOB_COLUMNS}
+        FROM jobs j
+        WHERE j.is_active = TRUE
+          AND NOT EXISTS (
+              SELECT 1 FROM job_tracking t
+              WHERE t.user_id = %s AND t.job_id = j.job_id AND t.status = 'dismissed'
+          )
+        """,
+        (user_id,),
+    )
 
 
 def _to_mysql_datetime(value):
