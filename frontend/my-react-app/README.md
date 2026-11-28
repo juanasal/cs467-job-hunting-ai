@@ -8,7 +8,8 @@ A component-driven React application built with Vite and Lucide icons to help us
 src/
 ├── components/                  # Reusable UI building blocks
 │   ├── JobApplicationRow.jsx    # Renders an individual application row inside tables
-│   ├── JobPostingCard.jsx       # Renders an individual explore card for available job listings
+│   ├── JobPostingCard.jsx       # Renders a job card (sample postings, or a recommendation with its fit score)
+│   ├── RecommendedJobs.jsx      # Dashboard list of ranked jobs from GET /api/recommendations
 │   ├── Sidebar.jsx              # App navigation panel, workspace links, and login toggle
 │   └── StatCard.jsx             # Renders metric cards (Total, In Progress, Offers, Rejected)
 ├── data/                        # Static and mock data files (easy to swap for APIs)
@@ -61,6 +62,8 @@ If you are developing a production application, we recommend using TypeScript wi
 OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, conversational share link, OpenAI, 2026, https://chatgpt.com/share/6ad91d99-e174-83e8-8fc4-19355e77abe8.
 
 The login-required requests and private pages (JH-014: `src/api.js`, the private page and session-expiry handling in `src/App.jsx`, the `apiFetch` changes in `src/components/ProfileForm.jsx`, the `notice` prop in `src/components/LoginForm.jsx`, the `.auth-notice` style in `src/App.css`, and the "Requests that need login" section of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y](https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y) documents the GenAI interaction that led to my code.
+
+The ranked job dashboard (JH-042: `src/components/RecommendedJobs.jsx` and `src/components/RecommendedJobs.test.jsx`, the `match` prop and missing-field labels in `src/components/JobPostingCard.jsx`, the Dashboard changes in `src/App.jsx`, the recommended jobs styles in `src/App.css`, and the related updates to this README, `documentation/DATA_CONTRACT.md`, and `documentation/TESTING_GUIDE.md`) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/R4kpbYnXZdPw1xLbtn9zp7](https://claude.ai/artifact/R4kpbYnXZdPw1xLbtn9zp7) documents the GenAI interaction that led to my code.
 
 ## How to Run
 
