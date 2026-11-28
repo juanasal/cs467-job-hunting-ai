@@ -22,7 +22,7 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 | Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
 | Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
-| Recommendations | Pure `exact-v1` qualification scorer and fixed pytest cases | Extend `backend/tests/test_job_matching.py`; extraction, related skills, and preference filtering remain separate work |
+| Recommendations | Rule-based extraction, deterministic qualification scoring, preference evaluation, ranking, and explanations | Extend `test_job_requirements.py`, `test_job_matching.py`, or `test_match_evaluation.py` under `backend/tests/` |
 
 Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
 
@@ -154,7 +154,30 @@ For the MySQL setup and test environment commands, see the [backend README](../b
 
 ## 7. Recommendation Testing
 
-The [exact-match baseline](JOB_MATCHING.md) implements `exact-v1` qualification scoring with synthetic profiles, jobs, and hand-authored requirements in `backend/tests/test_job_matching.py`. Keep these independently calculated expectations versioned as matching evolves. Requirement extraction and related-skill scoring remain future work; see the baseline guide for scope and follow-up tickets.
+`backend/tests/test_job_requirements.py` checks priority, exact evidence, and incomplete descriptions. `backend/tests/test_job_matching.py` compares the `exact-v1` baseline with the default `related-v1` scorer, covering directed partial credit, zero-credit controls, and precedence for exact credit. See the [matching guide](JOB_MATCHING.md) for the comparison results.
+
+`backend/tests/test_match_evaluation.py` checks strict exclusions, soft mismatches, unverified preferences, incomplete profiles, and score bounds and component totals. `backend/tests/test_job_normalizer.py` covers withholding salary without verified annual units and currency. `backend/tests/test_search_preferences.py` uses MySQL to verify that each strict flag persists through PUT and GET and that changing a flag marks only the current user's matches for recalculation. Apply migration `004_add_strict_preferences.sql` before running the preferences integration tests.
+
+The recommendation tests in `test_match_evaluation.py` also check descending
+scores, stable job-ID tie-breaking, result limits after sorting, repeated
+results, evidence-based explanations, and empty or incomplete inputs.
+
+`backend/tests/test_recommendations.py` uses MySQL to verify that
+`GET /api/recommendations` ranks and explains stored jobs, including a manually
+imported posting. It covers changes to saved skills and workplace preferences,
+score order with job-ID tie-breaking, the saved result limit, tracking and
+activity filters, and empty feeds with insufficient profile information or
+pending or failed ingestion. It also checks that committed jobs remain
+available after a source failure. The tests for `GET /api/jobs/{job_id}` cover
+job details with and without a match, inactive jobs, unknown and invalid IDs,
+and user isolation. Both routes are tested for required authentication.
+Apply all database migrations, including `004_add_strict_preferences.sql`
+and `005_add_jobs_is_active.sql`, before running the MySQL tests.
+
+The same file includes an endpoint test with stubbed database inputs that
+checks live ranking, explanations, empty responses, and zero external source
+calls. `backend/tests/test_saved_search_pipeline.py` checks that a source
+failure after a successful page occurs before ingestion opens a write transaction.
 
 - Check score bounds and required output fields.
 - Check expected ranking relationships, such as a Python role ranking above an unrelated role for a Python-focused profile.
@@ -183,7 +206,7 @@ While developing, run a specific file or test:
 python -m pytest tests/test_adzuna_client.py
 python -m pytest tests/test_main.py::test_health_returns_ok
 python -m pytest tests/test_job_normalizer.py
-python -m pytest tests/test_job_matching.py -q
+python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q
 python -m pytest tests/test_job_repository.py -v
 ```
 

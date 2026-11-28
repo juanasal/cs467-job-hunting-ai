@@ -1,9 +1,14 @@
-"""Fixed, hand-calculated expectations for exact-v1."""
+"""Fixed, hand-calculated expectations for exact-v1 and related-v1."""
 from copy import deepcopy
+from functools import partial
 
 import pytest
 
-from app.job_matching import prepare_requirements, score_job
+from app.job_matching import prepare_requirements, score_job as score_with_method
+from app.job_requirements import extract_requirements
+
+
+score_job = partial(score_with_method, method_version="exact-v1")
 
 
 @pytest.fixture
@@ -220,3 +225,57 @@ def test_unmapped_minima_rejected(job, category, minimum):
     job["description"] = minimum
     with pytest.raises(ValueError, match="minimum"):
         prepare_requirements(job, {"skills": [], category: level(minimum)})
+
+
+@pytest.mark.parametrize("skills,requirement,expected_baseline,expected_credit,expected_source", [
+    (["React"], "UI development", 0, 0.75, "React"),
+    (["PostgreSQL"], "SQL", 0, 0.75, "PostgreSQL"),
+    (["TypeScript"], "JavaScript", 0, 0.75, "TypeScript"),
+    (["Python"], "UI development", 0, 0, None),
+    (["UI development"], "React", 0, 0, None),
+    (["Java"], "C#", 0, 0, None),
+    (["React", "UI development"], "UI development", 80, 1, "UI development"),
+])
+def test_related_skill_comparison(
+    profile, job, skills, requirement, expected_baseline, expected_credit, expected_source,
+):
+    profile["skills"] = skills
+    job["description"] = f"Required: {requirement}."
+    extracted = extract_requirements(job)
+    prepared = prepare_requirements(job, extracted, warnings=extracted["warnings"])
+    baseline = score_job(profile, job, requirements=prepared)
+    updated = score_with_method(profile, job, requirements=prepared)
+
+    assert baseline["method_version"] == "exact-v1"
+    assert baseline["match_score"] == expected_baseline
+    assert updated["method_version"] == "related-v1"
+    assert updated["match_score"] == 80 * expected_credit
+    assert updated["matched_skills"] == ([expected_source] if expected_source else [])
+    target, = updated["skill_targets"]
+    assert target["name"] == requirement.casefold()
+    assert target["credit"] == expected_credit
+    assert target["profile_skill"] == expected_source
+    status = {0: "unmatched", 0.75: "related match", 1: "exact match"}[expected_credit]
+    assert target["status"] == status
+    if expected_source is not None:
+        assert (
+            f"{requirement.casefold()} (required): {status} from {expected_source!r}"
+            in updated["match_explanation"]
+        )
+
+
+def test_one_profile_skill_can_support_multiple_targets(profile, job):
+    profile["skills"] = ["SQL", " postgresql ", "PostgreSQL"]
+    job["description"] = "Required: PostgreSQL. Preferred: SQL. Required: Docker."
+    extracted = extract_requirements(job)
+    prepared = prepare_requirements(job, extracted)
+    baseline = score_job(profile, job, requirements=prepared)
+    updated = score_with_method(profile, job, requirements=prepared)
+    assert baseline == {**updated, "method_version": "exact-v1"}
+
+    profile["skills"].remove("SQL")
+    baseline = score_job(profile, job, requirements=prepared)
+    updated = score_with_method(profile, job, requirements=prepared)
+    assert baseline["match_score"] == 32  # 80 * 2 / 5
+    assert updated["match_score"] == 44  # 80 * (2 + 0.75) / 5
+    assert updated["matched_skills"] == [" postgresql "]

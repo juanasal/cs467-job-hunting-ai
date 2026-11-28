@@ -18,6 +18,7 @@ from app.authentication import router as auth_router
 from app.tracking import router as tracking_router
 from app.profile import router as profile_router
 from app.search_preferences import router as preferences_router
+from app.recommendations import router as recommendations_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -48,6 +49,7 @@ app.include_router(auth_router)
 app.include_router(preferences_router)
 app.include_router(tracking_router)
 app.include_router(profile_router)
+app.include_router(recommendations_router)
 
 
 def error_response(status_code, message, details=None, headers=None):

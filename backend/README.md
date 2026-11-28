@@ -28,7 +28,7 @@ Settings are read from `backend/.env`. Variables already set in your shell take 
 | `DB_PASSWORD` | Yes | Application database password |
 | `DB_SSL_CA` | For Aiven | Path to the server's CA certificate (`ca.pem` from the Aiven console). Turns on SSL. |
 | `TEST_DB_*` | For DB tests | Separate test database used by database integration tests and `tests/test_job_repository.py` (see [Run the tests](#run-the-tests)) |
-| `FRONTEND_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Defaults to `http://localhost:3000`. |
+| `FRONTEND_ORIGINS` | No | Comma-separated frontend origins trusted by CORS and Origin validation. Defaults to `http://localhost:3000`. For local Vite use, add the exact origin printed by Vite, usually `http://localhost:5173`. |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | For Adzuna client | Adzuna API credentials |
 
 The server requires valid `DB_*` settings at startup. Authentication routes also use these application database settings. `TEST_DB_*` settings are separate and are only used by database integration tests.
@@ -58,7 +58,7 @@ More details about the Adzuna API and our findings are documented in [`documenta
 
 The normalizer:
 - validates required fields and skips unusable records;
-- converts salary values to numbers or `null`;
+- retains salary bounds only with verified annual units and currency;
 - validates job URLs and retrieval timestamps;
 - normalizes posting dates and predicted salary values;
 - conservatively infers `remote`, `hybrid`, or `onsite` when the listing provides clear evidence, and otherwise uses `unknown`.
@@ -71,11 +71,17 @@ Run the normalizer tests from the `backend/` directory:
 python -m pytest tests/test_job_normalizer.py
 ```
 
-## Qualification scoring
+## Job matching and recommendations
 
-`app/job_matching.py` provides the pure `exact-v1` baseline with explicit prepared
-requirements. See [usage, rules, and limitations](../documentation/JOB_MATCHING.md).
-Run `python -m pytest tests/test_job_matching.py -q` from `backend/`.
+`app/job_requirements.py` extracts qualifications from job descriptions.
+`app/job_matching.py` scores prepared requirements using `related-v1` by default.
+Pass `method_version="exact-v1"` to select the exact-match baseline.
+`app/match_evaluation.py` evaluates saved preferences and exposes
+`recommend_jobs(profile, jobs, preferences)` for ranked recommendations with
+evidence-based explanations. It accepts normalized, persisted job records and
+applies the saved result limit after sorting.
+See [usage, rules, and comparison results](../documentation/JOB_MATCHING.md).
+Run `python -m pytest tests/test_job_requirements.py tests/test_job_matching.py tests/test_match_evaluation.py -q` from `backend/`.
 
 ## Database setup
 
@@ -146,7 +152,7 @@ These tests cover inserting new jobs, updating existing jobs, preventing duplica
 - Unknown job IDs return `404`. Invalid IDs or statuses, or an extra field like `user_id` in the body, return `422`. Undoing a job the user hasn't tracked returns `404`.
 - `applied` only records what the user says they did. The app does not submit job applications.
 
-**Dismissed jobs and the feed:** the regular recommendations feed must leave out any job the signed-in user has dismissed. Saved and applied jobs stay in the feed. The feed query should filter with:
+**Dismissed jobs and the feed.** The recommendations feed excludes jobs the signed-in user has dismissed. Saved and applied jobs remain candidates for ranking when they pass the job activity and preference checks. The feed filters dismissals with this SQL:
 
 ```sql
 AND NOT EXISTS (
@@ -161,6 +167,75 @@ Run the tracking tests (they need the `TEST_DB_*` settings, see below) from the 
 
 ```bash
 python -m pytest tests/test_tracking.py -v
+```
+
+## Recommendations and job details API
+
+`app/recommendations.py` ranks stored jobs for the signed-in user. Both routes require login and use the session cookie to select the user. A `user_id` in the request is ignored.
+
+The feed loads the user's saved skills, education, experience, and search preferences from MySQL. It reads active jobs from any import source, including manual imports, and excludes jobs the user dismissed. The existing matcher extracts requirements, evaluates preferences, scores qualification fit (including related skills), and explains each result. Changes to saved matching inputs and stored jobs take effect on the next request.
+
+| Route | Result |
+| --- | --- |
+| `GET /api/recommendations` | `{"recommendations": [{"job": {...}, "match": {...}}, ...]}`, best match first |
+| `GET /api/jobs/{job_id}` | `{"job": {...}, "match": {...}}`, with a current match for a scorable, eligible active job or `null` when no match is available. When current matching inputs are unavailable or the job is inactive, details can return the user's previously saved match. |
+
+`job` has the [Job Posting](../documentation/DATA_CONTRACT.md#4-job-posting) fields and `match` has the [Match Result](../documentation/DATA_CONTRACT.md#5-match-result) fields:
+
+```json
+{
+  "recommendations": [
+    {
+      "job": {
+        "job_id": 1001,
+        "external_job_id": "ADZ-123456",
+        "source": "adzuna",
+        "title": "Junior Software Engineer",
+        "company": "Example Corp",
+        "location": "Portland, OR",
+        "workplace_type": "hybrid",
+        "salary_min": 75000,
+        "salary_max": 90000,
+        "salary_currency": "USD",
+        "salary_is_predicted": false,
+        "description": "We are seeking a software engineer with Python and SQL experience.",
+        "date_posted": "2026-10-18",
+        "job_url": "https://example.com/jobs/123456",
+        "retrieved_at": "2026-10-19T18:30:00Z",
+        "first_seen_at": "2026-10-19T18:30:00Z",
+        "is_active": true
+      },
+      "match": {
+        "user_id": 1,
+        "job_id": 1001,
+        "match_score": 80,
+        "matched_skills": ["Python", "SQL"],
+        "match_explanation": "Direct skill matches include Python, SQL. ...",
+        "created_at": "2026-10-19T18:35:00Z"
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- **Order:** highest `match_score` first; ties go to the lower `job_id` (the same rule as `recommend_jobs`).
+- **Preferences.** The saved `result_count` applies after ranking. Strict location, workplace, and salary mismatches exclude a job. Soft mismatches and unverified values appear in the explanation. Saved titles guide explicit collection.
+- **Tracking.** Dismissed jobs are excluded from the feed. Saved and applied jobs remain eligible subject to job activity, preferences, and the result limit. Job details still work for a dismissed job. See the [Job tracking API](#job-tracking-api).
+- **Inactive jobs** (`is_active = false`) are left out of the feed. Job details still returns them, with `is_active: false`, so saved and applied jobs can still be opened. Nothing marks jobs inactive automatically yet (see `db/README.md`).
+- **Evaluation time.** For current matches, `created_at` is the UTC evaluation time. The feed recomputes matches on each request and does not write match rows. It scans the eligible stored pool before applying the result limit.
+- **Insufficient profile or preferences.** The feed returns `200` with `{"recommendations": []}` when the user has no saved profile, no saved skills, no saved search preferences, or no saved job titles.
+- **No eligible jobs.** An empty job table, excluded jobs, or jobs without usable matching data return the same empty response.
+- **Pending ingestion.** The feed immediately returns matches from committed jobs, or the same empty response when none are eligible. This MVP has no ingestion status in the response.
+- **External source or ingestion failure.** The explicit `run_saved_search` caller receives the failure. Source failures happen before job writes, and failed writes roll back. The feed continues to use previously committed jobs or returns the same empty response. A failure reading MySQL uses the standard `500` error response.
+- **Collection limits.** Dashboard requests make zero Adzuna requests and start no ingestion. Explicit saved searches retain the existing limits of 10 queries, five pages per query, and 100 collected results. The Adzuna client uses a 10-second HTTP timeout setting and makes no automatic retries.
+- **Errors:** an unknown job ID returns `404` (`"Job not found."`), an invalid ID (`0`, `abc`) returns `422`, and requests without a valid session return `401`, all in the standard [error format](#error-format).
+
+Run the tests (they need the `TEST_DB_*` settings, see below) from the `backend/` directory:
+
+```bash
+python -m pytest tests/test_recommendations.py -v
 ```
 
 ## Run the server
@@ -195,6 +270,16 @@ docker info
 ```
 
 **3. Create an isolated MySQL database.** This downloads the MySQL image if needed and publishes MySQL on local port `3307`. The credentials below are for this local test database only. If the named container already exists, follow [Subsequent runs](#subsequent-runs) instead.
+docker run --rm hello-world
+```
+
+If `docker` is not found, finish installation and reopen your terminal. If it cannot connect to the Docker daemon, start Docker Desktop (or the Docker Engine service on Linux) and retry. The `hello-world` command downloads a small image and prints a success message.
+
+### Run the database integration tests
+
+Complete the Python setup above and activate your virtual environment first. The commands below use Bash or Zsh (macOS/Linux; on Windows use a WSL Bash terminal with Docker Desktop integration enabled). Run them from `backend/`.
+
+Start a throwaway MySQL instance in Docker, apply the migrations in the order shown below, and set the test settings in `backend/.env` or your shell. The password below is only for this local container:
 
 ```bash
 docker run -d --name jh-test-mysql -p 127.0.0.1:3307:3306 \
@@ -221,9 +306,11 @@ Expect `3306/tcp -> 127.0.0.1:3307`. If the mapping differs or is missing, see [
 
 ```bash
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/001_create_tables.sql
-docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_create_tables.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/002_add_jobs_first_seen_at.sql
 docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_add_match_results_recalculation_flag.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_create_user_sessions.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/004_add_strict_preferences.sql
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/005_add_jobs_is_active.sql
 ```
 
 Migration `003_add_match_results_recalculation_flag.sql` is introduced by JH-017; these instructions assume that change has been merged. After pulling changes, also apply any later migrations present in `db/migrations/`, in numerical order. Do not reapply migrations already run against this database. No seed data is required for the tests.
@@ -332,7 +419,7 @@ Use `jh-test-mysql-3308` in every readiness, migration, start, stop, and port co
 docker exec jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test -e "SHOW TABLES; SHOW COLUMNS FROM jobs;"
 ```
 
-For the migrations currently listed above, `user_sessions` is added by `002_create_tables.sql` and `jobs.first_seen_at` by `002_add_jobs_first_seen_at.sql`. Compare the schema with each migration and apply only missing changes. If uncertain, create a separate fresh test container rather than deleting existing data.
+The `003_create_user_sessions.sql` migration creates `user_sessions`, and `002_add_jobs_first_seen_at.sql` adds `jobs.first_seen_at`. Compare the schema with each migration and apply only missing changes. If uncertain, create a separate fresh test container to preserve existing data.
 
 **`No module named fastapi` (or another dependency):** Activate the virtual environment and install the requirements with its Python:
 
@@ -346,6 +433,15 @@ python -m pip install -r requirements.txt
 **Database tests skipped:** Run `python -m pytest -q -rs` to see the reason. Export all `TEST_DB_*` settings from step 5 in the same terminal before testing. Without test database configuration, integration tests intentionally skip. Keep `DB_NAME` different from `TEST_DB_NAME`; the tests reject settings that point at the application database.
 
 **Connection refused or startup settings errors:** Check that Docker is running, MySQL is ready, and `docker port` matches `TEST_DB_PORT`. Repeat the step 5 exports if application startup reports missing `DB_*` settings. The MySQL password-on-command-line warning is expected for these local commands and does not itself indicate failure.
+docker exec -i jh-test-mysql mysql -ujh_test -plocal_test_pw job_hunting_ai_test < db/migrations/003_create_user_sessions.sql
+
+TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3307 TEST_DB_NAME=job_hunting_ai_test \
+  TEST_DB_USER=jh_test TEST_DB_PASSWORD=local_test_pw python -m pytest -q
+```
+
+This runs the full backend test suite, including database integration tests when the separate MySQL test database is configured. Without the `TEST_DB_*` settings, database integration tests are skipped. Check the pytest output to confirm that the integration tests ran rather than being skipped.
+
+Stop it with `docker stop jh-test-mysql` and start it again later with `docker start jh-test-mysql`. On subsequent runs, start Docker Desktop and the existing container, check readiness, and rerun the test command; do not recreate the container or reapply the initial migration. If the container name is already in use, use `docker start` instead of `docker run`. If port `3307` is occupied, choose another host port in `-p` and use that same port for `TEST_DB_PORT`. Never point `TEST_DB_*` at the shared or production database.
 
 ## Browse the local database with DBeaver
 
@@ -401,3 +497,5 @@ The database helpers (JH-006: `app/db.py`, the `DB_SSL_CA` setting in `app/confi
 The access control tests (JH-011: `tests/test_access_control.py`, the `TEST_DB_*` settings in `.github/workflows/ci.yml`, and the related updates to `documentation/AUTHENTICATION_TESTING.md`, `documentation/CI_GUIDE.md`, and `documentation/TESTING_GUIDE.md`) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX](https://claude.ai/artifact/5b1fkct6Vcvo2VJVTtxanX) documents the GenAI interaction that led to my code.
 
 The registration tests (JH-009: the registration tests in `tests/test_auth.py` and the related updates to `documentation/AUTHENTICATION_TESTING.md`) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/HTwKKJGpPc4Pj9i6zh3rrX](https://claude.ai/artifact/HTwKKJGpPc4Pj9i6zh3rrX) documents the GenAI interaction that led to my code.
+
+The recommendations and job details API (JH-041: `app/recommendations.py`, the router registration in `app/main.py`, `tests/test_recommendations.py`, `db/migrations/005_add_jobs_is_active.sql` and its step in `.github/workflows/ci.yml`, the recommendations and job details API section of this README, and the related updates to `db/README.md`, `documentation/DATA_CONTRACT.md`, and `documentation/TESTING_GUIDE.md`) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/EXzzqUxUhQVS5W6WbbnsxM](https://claude.ai/artifact/EXzzqUxUhQVS5W6WbbnsxM) documents the GenAI interaction that led to my code.

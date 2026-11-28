@@ -38,7 +38,7 @@ The application uses server-side sessions stored in MySQL.
 
 The browser stores the session identifier in an HTTP-only cookie. The backend validates the session on authenticated requests and rejects expired or revoked sessions.
 
-Server-side session information is stored in the `user_sessions` table, created by `backend/db/migrations/002_create_tables.sql`.
+Server-side session information is stored in the `user_sessions` table, created by `backend/db/migrations/003_create_user_sessions.sql`.
 
 The table tracks:
 

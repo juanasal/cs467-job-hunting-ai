@@ -39,8 +39,8 @@ def test_normalizes_complete_adzuna_job():
         "company": "Govcio LLC",
         "location": "Triangle, Prince William County",
         "workplace_type": "hybrid",
-        "salary_min": 213926.73,
-        "salary_max": 213926.73,
+        "salary_min": None,
+        "salary_max": None,
         "salary_currency": None,
         "salary_is_predicted": True,
         "description": (
@@ -115,10 +115,33 @@ def test_salary_values_are_normalized_to_numbers_or_none():
         "redirect_url": "https://www.adzuna.com/details/12345",
     }
 
-    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT,
+                                  salary_unit="annual", salary_currency="USD")
 
     assert result["salary_min"] == 125000.50
     assert result["salary_max"] is None
+    assert result["salary_currency"] == "USD"
+
+
+@pytest.mark.parametrize(("unit", "currency"), [
+    ("hourly", "USD"),
+    (None, "USD"),
+    ("annual", None),
+])
+def test_withholds_salary_without_verified_annual_units_and_currency(unit, currency):
+    raw_job = {
+        "id": "12345",
+        "title": "Software Engineer",
+        "description": "Build software applications.",
+        "salary_min": 25,
+        "salary_max": 40,
+        "redirect_url": "https://www.adzuna.com/details/12345",
+    }
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT,
+                                  salary_unit=unit, salary_currency=currency)
+    assert result["salary_min"] is None
+    assert result["salary_max"] is None
+    assert result["salary_currency"] is None
 
 
 def test_invalid_job_url_is_skipped(caplog):
@@ -178,14 +201,16 @@ def test_non_finite_salary_values_become_none():
         "redirect_url": "https://www.adzuna.com/details/12345",
     }
 
-    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT,
+                                  salary_unit="annual", salary_currency="USD")
 
     assert result["salary_min"] is None
     assert result["salary_max"] is None
 
     raw_job["salary_min"] = "1e999"
 
-    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT)
+    result = normalize_adzuna_job(raw_job, retrieved_at=RETRIEVED_AT,
+                                  salary_unit="annual", salary_currency="USD")
 
     assert result["salary_min"] is None
 

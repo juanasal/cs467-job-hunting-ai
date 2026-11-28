@@ -1,6 +1,5 @@
 
 import hashlib
-import os
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -20,7 +19,7 @@ from pydantic import BaseModel, Field
 from pwdlib import PasswordHash
 from pymysql.err import IntegrityError
 
-from app.config import get_frontend_origins
+from app.config import get_frontend_origins, load_environment
 from app.db import get_db_connection
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -31,8 +30,21 @@ password_hash = PasswordHash.recommended()
 # Session configuration.
 IDLE_TIMEOUT_MINUTES = 30
 MAX_SESSION_DAYS = 7
-PRODUCTION = os.getenv("APP_ENV") == "production"
-COOKIE_NAME = "__Host-session" if PRODUCTION else "session"
+
+
+def get_cookie_settings(env=None):
+    """Resolve cookie settings after loading backend/.env when env is omitted."""
+    if env is None:
+        env = load_environment()
+
+    app_env = env.get("APP_ENV", "development").strip().lower()
+    production = app_env == "production"
+    cookie_name = "__Host-session" if production else "session"
+    return app_env, production, cookie_name
+
+
+# Load backend/.env before reading APP_ENV. Process environment values still win.
+APP_ENV, PRODUCTION, COOKIE_NAME = get_cookie_settings()
 
 
 class RegisterRequest(BaseModel):
@@ -67,7 +79,9 @@ def get_current_user(
     """
     Validates server-side sessions stored in MySQL.
     Enforces absolute lifetime (7 days) and idle timeout (30 minutes).
-    Slides the window by updating last_activity_at on successful activity.
+    Locks the session row while validating and refreshing activity so logout
+    cannot commit a revocation between the active-session check and refresh.
+    Requests that already passed validation may finish after logout commits.
     """
     if not session:
         raise HTTPException(
@@ -92,6 +106,7 @@ def get_current_user(
                     JOIN users u ON s.user_id = u.user_id
                     WHERE s.token_hash = %s
                       AND s.revoked_at IS NULL
+                    FOR UPDATE
                     """,
                     (token_hash,),
                 )
@@ -140,9 +155,18 @@ def get_current_user(
                     UPDATE user_sessions
                     SET last_activity_at = %s
                     WHERE session_id = %s
+                      AND revoked_at IS NULL
                     """,
                     (now, db_session["session_id"]),
                 )
+
+                if cursor.rowcount != 1:
+                    connection.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or revoked session.",
+                    )
+
                 connection.commit()
 
                 return {

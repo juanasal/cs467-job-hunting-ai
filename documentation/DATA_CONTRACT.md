@@ -126,6 +126,9 @@ Stores the user's current job-search criteria.
 | `salary_min` | number or null | No | Annual salary | Minimum desired salary |
 | `salary_max` | number or null | No | Annual salary | Maximum desired salary, if applicable |
 | `salary_currency` | string | Yes | `USD` for MVP | Salary currency |
+| `strict_location` | boolean | No | Defaults to `false` | Exclude confirmed violations of the location preference |
+| `strict_workplace` | boolean | No | Defaults to `false` | Exclude confirmed violations of the work arrangement preference |
+| `strict_salary` | boolean | No | Defaults to `false` | Exclude confirmed violations of the salary preference |
 | `result_count` | integer | Yes | Positive integer | Number of recommendations requested |
 
 ### Example
@@ -153,6 +156,9 @@ Stores the user's current job-search criteria.
 ```
 
 A `null` salary value means the user did not specify that limit.
+The preferences PUT replaces the saved record. Omitted strict flags default to
+`false`. Missing or incomparable job evidence leaves the job eligible with the
+affected preference unverified, including when the preference is strict.
 
 ---
 
@@ -178,6 +184,7 @@ Stores a standardized job listing retrieved from an external source such as Adzu
 | `job_url` | string | Yes | Valid URL | Link to original listing |
 | `retrieved_at` | datetime | Yes | ISO 8601 | When the application retrieved the listing |
 | `first_seen_at` | datetime | Yes | ISO 8601 | Retrieval timestamp of the first stored observation of the job listing |
+| `is_active` | boolean | Yes | `true`, `false` | Whether the job can appear in recommendations; defaults to `true` |
 
 ### Example
 
@@ -198,10 +205,13 @@ Stores a standardized job listing retrieved from an external source such as Adzu
   "date_posted": "2026-10-18",
   "job_url": "https://example.com/jobs/123456",
   "retrieved_at": "2026-10-19T18:30:00Z",
-  "first_seen_at": "2026-10-19T18:30:00Z"
+  "first_seen_at": "2026-10-19T18:30:00Z",
+  "is_active": true
 }
 ```
 `first_seen_at` is initialized from `retrieved_at` when a job is first stored and remains unchanged on later imports. `retrieved_at` records the latest retrieval timestamp. If an older import arrives after a newer one, it does not overwrite the newer timestamp or job details.
+
+Inactive jobs (`is_active` is `false`) are kept rather than deleted so saved and applied jobs remain available. They are left out of recommendations but still returned by job details.
 
 If an external source does not provide a field such as salary or location, that field should be stored as `null`.
 
@@ -221,9 +231,9 @@ Stores the result of comparing a user profile and preferences with a job posting
 |---|---|---:|---|---|
 | `user_id` | integer | Yes | Existing user ID | User receiving the recommendation |
 | `job_id` | integer | Yes | Existing job ID | Job being evaluated |
-| `match_score` | number | Yes | `0–100` | Overall relevance score |
-| `matched_skills` | array of strings | Yes | — | User skills that align with the posting |
-| `match_explanation` | string | Yes | — | Short explanation of why the job matches |
+| `match_score` | number | Yes | `0–100` | Qualification score based on the available job and profile evidence |
+| `matched_skills` | array of strings | Yes | — | Profile skills credited for direct or related matches |
+| `match_explanation` | string | Yes | — | Summary of qualification evidence, preference compatibility, and relevant unknowns |
 | `created_at` | datetime | Yes | ISO 8601 | When the score was generated |
 
 ### Example
@@ -232,12 +242,12 @@ Stores the result of comparing a user profile and preferences with a job posting
 {
   "user_id": 1,
   "job_id": 1001,
-  "match_score": 86,
+  "match_score": 80,
   "matched_skills": [
     "Python",
     "SQL"
   ],
-  "match_explanation": "Strong skill alignment and the position matches the user's preferred experience level and location.",
+  "match_explanation": "Direct skill matches include Python, SQL. Education fit could not be determined from the available information. Experience fit could not be determined from the available information. Location matches your preference.",
   "created_at": "2026-10-19T18:35:00Z"
 }
 ```
@@ -247,7 +257,10 @@ Stores the result of comparing a user profile and preferences with a job posting
 - `0` = no meaningful match
 - `100` = strongest possible match
 
-The exact scoring algorithm may change during development, but the API should continue returning scores on the same `0–100` scale.
+Preferences determine eligibility and contribute to the explanation. Ranking
+uses the qualification score and breaks ties by ascending job ID. The backend
+ranker returns the match fields before the caller supplies `created_at`. For
+live API matches this field is the UTC evaluation time. See the [matching guide](JOB_MATCHING.md#ranking-and-explaining-recommendations).
 
 ---
 
@@ -353,7 +366,8 @@ unknown
 
 For the MVP:
 
-- Salaries are treated as annual amounts.
+- Job salary bounds are populated only when ingestion verifies annual units
+  and currency. Hourly or unknown-unit amounts are withheld without conversion.
 - Currency should be stored separately.
 - User search preferences use `USD`.
 - Missing salary information should use `null`.
@@ -416,7 +430,14 @@ to generate:
 Match Result
 ```
 
-The frontend uses these records to display recommendations and allow users to save, dismiss, or mark jobs as applied.
+The authenticated `GET /api/recommendations` route ranks active MySQL jobs using
+the user's saved profile and preferences and returns a `job` and `match` for
+each recommendation. Insufficient inputs and an empty eligible pool return
+`200` with `{"recommendations": []}`. The feed reads committed jobs during
+pending or failed ingestion. `GET /api/jobs/{job_id}` returns job details and an
+available match. See the [backend README](../backend/README.md#recommendations-and-job-details-api).
+The frontend Explore view currently uses sample postings. Job
+Tracking defines the saved, dismissed, and applied statuses for persisted jobs.
 
 ---
 
