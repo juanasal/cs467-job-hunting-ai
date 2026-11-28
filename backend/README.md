@@ -15,6 +15,23 @@ cp .env.example .env             # Windows: copy .env.example .env
 
 Then edit `backend/.env` with your values. **Never commit `.env`.**
 
+## Run the server
+
+From `backend/`, start FastAPI locally with:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The API health route is `http://127.0.0.1:8000/health`. The database check at
+`http://127.0.0.1:8000/health/db` runs `SELECT 1` against the configured MySQL
+database. Keep production `DB_*` values and the Aiven CA certificate in Render
+service settings/secret files; never add them to Vercel or a `VITE_*` variable,
+because Vite variables are included in downloadable browser assets.
+
+For production settings, Vercel and Render commands, and HTTPS proxy checks, see
+the [JH-008 hosting and deployment guide](../documentation/decisions/hosting.md).
+
 ## Settings
 
 Settings are read from `backend/.env`. Variables already set in your shell take priority over the file.

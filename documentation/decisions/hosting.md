@@ -3,7 +3,7 @@
 **Decision:** Run the FastAPI backend as a **Render Free web service**.
 **Decided:** 2026-11-04. Prices and limits were checked on each host's own site that day. Check [Render pricing](https://render.com/pricing) again before paying for anything.
 
-This is the hosting decision only. The actual deployment is a separate ticket.
+This document records the hosting decision and the settings needed to deploy it.
 
 ## Where each part of the app runs
 
@@ -110,11 +110,35 @@ Don't set `TEST_DB_*` on Render. Those settings are only for local integration t
 ### 4. Check it
 
 - Open `https://<service-name>.onrender.com/health`. It should return `{"status": "ok"}`. The first request after the service has been idle can take about a minute.
+- Open `https://<service-name>.onrender.com/health/db`. It should return `{"status": "ok", "database": "ok"}` after confirming a real MySQL connection with `SELECT 1`.
 - Open `https://<service-name>.onrender.com/docs` for the API docs.
 
 ### 5. Aiven connection
 
 Aiven MySQL requires SSL, and `app/db.py` turns SSL on whenever `DB_SSL_CA` is set. Render Free doesn't give the service its own fixed IP address. Render's outbound IP ranges (Dashboard → **Connect → Outbound**) are shared by every Render service in that region, so adding them to Aiven's IP allowlist adds little protection. The database is protected by its password and SSL, so keep `DB_PASSWORD` only in Render's environment settings.
+
+### 6. Deploy the frontend and verify the proxy
+
+In Vercel, set the project Root Directory to `frontend/my-react-app`, Framework
+Preset to Vite, Build Command to `npm run build`, and Output Directory to `dist`.
+The checked-in `vercel.json` sends `/api/health` to the backend's `/health`
+route and forwards the other `/api/*` paths unchanged. Browser code should use
+relative `/api/...` paths; no backend credentials or database settings belong in
+Vercel frontend environment variables.
+
+After linking the repository and project in the Vercel CLI, deploy with
+`vercel --prod` from `frontend/my-react-app/` (or merge the change to the
+configured production branch when Git auto-deploy is enabled). Verify
+`https://<project>.vercel.app/api/health` returns `{"status":"ok"}` and
+`https://<project>.vercel.app/api/health/db` returns both status fields. The
+second check proves the hosted backend reached MySQL. Both requests travel
+through the Vercel rewrite.
+
+To deploy from a local checkout, the backend build command is
+`pip install -r requirements.txt` and its start command is
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT`, with Render Root Directory
+set to `backend`. Production secrets and the Aiven CA certificate are configured
+in Render, never committed or placed in frontend build variables.
 
 ## Likely cost
 
