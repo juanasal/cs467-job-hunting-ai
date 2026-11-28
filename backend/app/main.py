@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_frontend_origins, get_settings
+from app.db import get_db_connection
 from app.authentication import router as auth_router
 from app.tracking import router as tracking_router
 from app.profile import router as profile_router
@@ -103,3 +104,13 @@ async def unhandled_exception_handler(request, exc):
 def health():
     """Confirm the API is running. Does not check the database."""
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+def database_health():
+    """Confirm that the API can connect to its configured MySQL database."""
+    with get_db_connection(app.state.settings) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    return {"status": "ok", "database": "ok"}

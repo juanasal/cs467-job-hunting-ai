@@ -43,7 +43,7 @@ function getErrorMessage(data, fallback) {
   return fallback;
 }
 
-export default function ProfileForm() {
+export default function ProfileForm({ onSessionExpired }) {
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
   const [educationLevel, setEducationLevel] = useState("");
@@ -74,6 +74,7 @@ export default function ProfileForm() {
         if (controller.signal.aborted) return;
 
         if (response.status === 401) {
+          onSessionExpired?.();
           throw new Error("Please log in to view your profile.");
         }
 
@@ -187,6 +188,7 @@ export default function ProfileForm() {
 
       if (!response.ok) {
         if (response.status === 401) {
+          onSessionExpired?.();
           throw new Error("Please log in to save your profile.");
         }
 
