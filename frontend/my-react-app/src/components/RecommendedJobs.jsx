@@ -21,7 +21,7 @@ function isOutdated(recommendations) {
 
 // Ranked job recommendations for the Dashboard (JH-042).
 // Jobs are shown in the order GET /api/recommendations returns them.
-export default function RecommendedJobs({ signedIn, authLoading, onGoToProfile }) {
+export default function RecommendedJobs({ signedIn, authLoading, onGoToProfile, onViewJob }) {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -111,7 +111,12 @@ export default function RecommendedJobs({ signedIn, authLoading, onGoToProfile }
 
         <div className="posting-results">
           {recommendations.map(({ job, match }) => (
-            <JobPostingCard key={job.job_id} job={job} match={match ?? null} />
+            <JobPostingCard
+              key={job.job_id}
+              job={job}
+              match={match ?? null}
+              onViewDetails={onViewJob ? () => onViewJob(job.job_id) : undefined}
+            />
           ))}
         </div>
 

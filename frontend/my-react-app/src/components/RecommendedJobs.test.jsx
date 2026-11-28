@@ -177,4 +177,24 @@ describe("JH-042 ranked job dashboard", () => {
     expect(screen.getByText(/Sign in to see job recommendations/)).toBeInTheDocument();
     expect(apiFetch).not.toHaveBeenCalled();
   });
+
+  it("opens the details of the job that was clicked (JH-043)", async () => {
+    apiFetch.mockResolvedValue(
+      mockResponse({
+        recommendations: [
+          recommendation(1, "Frontend Developer", 90),
+          recommendation(2, "Data Analyst", 75),
+        ],
+      })
+    );
+    const onViewJob = vi.fn();
+
+    renderDashboard({ onViewJob });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "View details for Data Analyst" })
+    );
+
+    expect(onViewJob).toHaveBeenCalledWith(2);
+  });
 });

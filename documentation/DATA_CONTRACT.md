@@ -436,8 +436,9 @@ each recommendation. Insufficient inputs and an empty eligible pool return
 `200` with `{"recommendations": []}`. The feed reads committed jobs during
 pending or failed ingestion. `GET /api/jobs/{job_id}` returns job details and an
 available match. See the [backend README](../backend/README.md#recommendations-and-job-details-api).
-The frontend Dashboard shows this feed in the order the API returns it. The
-Job Postings page still uses sample postings. Job
+The frontend Dashboard shows this feed in the order the API returns it, and
+"View details" on a job opens its details page from `GET /api/jobs/{job_id}`.
+The Job Postings page still uses sample postings. Job
 Tracking defines the saved, dismissed, and applied statuses for persisted jobs.
 
 ---
