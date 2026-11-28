@@ -63,6 +63,8 @@ OpenAI. "Vite + React Project Organization and Component Extraction." ChatGPT, c
 
 The login-required requests and private pages (JH-014: `src/api.js`, the private page and session-expiry handling in `src/App.jsx`, the `apiFetch` changes in `src/components/ProfileForm.jsx`, the `notice` prop in `src/components/LoginForm.jsx`, the `.auth-notice` style in `src/App.css`, and the "Requests that need login" section of this README) were generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y](https://claude.ai/artifact/72EBwcy2YAcYaw9JRGZS8Y) documents the GenAI interaction that led to my code.
 
+The ranked job dashboard (JH-042: `src/components/RecommendedJobs.jsx` and `src/components/RecommendedJobs.test.jsx`, the `match` prop and missing-field labels in `src/components/JobPostingCard.jsx`, the Dashboard changes in `src/App.jsx`, the recommended jobs styles in `src/App.css`, and the related updates to this README, `documentation/DATA_CONTRACT.md`, and `documentation/TESTING_GUIDE.md`) was generated with the help of Claude (Claude Code). This transcript [https://claude.ai/artifact/R4kpbYnXZdPw1xLbtn9zp7](https://claude.ai/artifact/R4kpbYnXZdPw1xLbtn9zp7) documents the GenAI interaction that led to my code.
+
 ## How to Run
 
 1. Start FastAPI on port `8000` using the [backend setup guide](../../backend/README.md#run-the-server). The Vite dev server proxies `/api/` requests to `http://127.0.0.1:8000`.
