@@ -29,6 +29,7 @@ import Sidebar from "./components/Sidebar";
 import StatCard from "./components/StatCard";
 import JobApplicationRow from "./components/JobApplicationRow";
 import JobPostingCard from "./components/JobPostingCard";
+import RecommendedJobs from "./components/RecommendedJobs";
 
 // GenAI attribution:
 // Developed with assistance from ChatGPT (OpenAI).
@@ -48,7 +49,8 @@ import { apiFetch, setUnauthorizedHandler } from "./api";
 import "./App.css";
 
 // Pages that need a signed-in user.
-// Add the dashboard here once it uses real user data.
+// The Dashboard stays public: its recommendations section asks
+// signed-out users to sign in instead.
 const PRIVATE_PAGES = ["Profile"];
 
 // Where to send the user after signing in if they weren't
@@ -750,6 +752,14 @@ export default function App() {
                 </p>
               </div>
             </section>
+
+            {activePage === "Dashboard" && (
+              <RecommendedJobs
+                signedIn={Boolean(user)}
+                authLoading={authLoading}
+                onGoToProfile={() => navigate("Profile")}
+              />
+            )}
 
             {activePage === "Dashboard" && (
               <section className="stats-grid">

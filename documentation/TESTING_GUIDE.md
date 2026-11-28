@@ -19,12 +19,12 @@ Before implementation, identify the feature's acceptance criteria and the cases 
 | Area | Current repository support | What to do now |
 |---|---|---|
 | Backend | pytest, FastAPI TestClient, and mocked Adzuna requests | Extend tests under `backend/tests/` |
-| Frontend | Lint and production build commands | Run these checks; component testing requires additional setup |
+| Frontend | Vitest and React Testing Library component tests, lint, and production build commands | Add `*.test.jsx` files next to the component under `frontend/my-react-app/src/` |
 | Database | MySQL migrations, development seed data, database helper tests, and job repository integration tests | Extend the existing tests and use a disposable MySQL database for integration testing |
 | Browser workflows | No end-to-end test setup | Add Playwright when a connected user workflow exists |
 | Recommendations | Rule-based extraction, deterministic qualification scoring, preference evaluation, ranking, and explanations | Extend `test_job_requirements.py`, `test_job_matching.py`, or `test_match_evaluation.py` under `backend/tests/` |
 
-Vitest with React Testing Library is the proposed frontend test setup. Playwright is the proposed browser test tool. Neither has a runnable test command in the current frontend package. Do not report these checks as passing until they have been implemented and run.
+Frontend component tests use Vitest with React Testing Library and run with `npm test`. Playwright is the proposed browser test tool and has no runnable test command yet. Do not report browser checks as passing until they have been implemented and run.
 
 The [CI workflow](../.github/workflows/ci.yml) runs backend pytest tests and frontend lint/build checks on pull requests and pushes to `main`. It can also be started manually.
 
@@ -234,11 +234,12 @@ In a new terminal at the repository root:
 ```bash
 cd frontend/my-react-app
 npm ci
+npm test
 npm run lint
 npm run build
 ```
 
-Lint checks code rules; the build checks that the production bundle can be produced. Neither verifies user interactions. When frontend test tooling is added, document its exact local and noninteractive CI commands here. CI commands must exit after one run rather than remain in watch mode.
+`npm test` runs the Vitest component tests once and exits (CI runs the same command). API calls are mocked, so no backend is needed. Lint checks code rules; the build checks that the production bundle can be produced.
 
 ## 9. Pull Request Checklist
 

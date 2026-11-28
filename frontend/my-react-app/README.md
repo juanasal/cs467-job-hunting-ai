@@ -8,7 +8,8 @@ A component-driven React application built with Vite and Lucide icons to help us
 src/
 ├── components/                  # Reusable UI building blocks
 │   ├── JobApplicationRow.jsx    # Renders an individual application row inside tables
-│   ├── JobPostingCard.jsx       # Renders an individual explore card for available job listings
+│   ├── JobPostingCard.jsx       # Renders a job card (sample postings, or a recommendation with its fit score)
+│   ├── RecommendedJobs.jsx      # Dashboard list of ranked jobs from GET /api/recommendations
 │   ├── Sidebar.jsx              # App navigation panel, workspace links, and login toggle
 │   └── StatCard.jsx             # Renders metric cards (Total, In Progress, Offers, Rejected)
 ├── data/                        # Static and mock data files (easy to swap for APIs)

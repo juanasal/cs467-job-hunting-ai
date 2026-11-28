@@ -548,3 +548,18 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
     gap: 0;
   }
 }
+/* Recommended jobs on the Dashboard (JH-042) */
+
+.recommended-jobs-body {
+  padding: 0 23px 18px;
+}
+
+.posting-match-tags {
+  margin-top: 8px;
+}
+
+.adzuna-attribution {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
