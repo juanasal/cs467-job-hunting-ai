@@ -16,7 +16,7 @@ function formatDate(value) {
   });
 }
 
-export default function JobPostingCard({ job, match, onTrack }) {
+export default function JobPostingCard({ job, match, onTrack, onViewDetails }) {
   const formatSalary = (amount) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -109,6 +109,16 @@ export default function JobPostingCard({ job, match, onTrack }) {
           </div>
         )}
       </div>
+
+      {onViewDetails && (
+        <button
+          className="secondary-button"
+          aria-label={`View details for ${job.title || "this job"}`}
+          onClick={onViewDetails}
+        >
+          View details
+        </button>
+      )}
 
       {onTrack && (
         <button

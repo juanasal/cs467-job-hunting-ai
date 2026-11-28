@@ -30,6 +30,7 @@ import StatCard from "./components/StatCard";
 import JobApplicationRow from "./components/JobApplicationRow";
 import JobPostingCard from "./components/JobPostingCard";
 import RecommendedJobs from "./components/RecommendedJobs";
+import JobDetails from "./components/JobDetails";
 
 // GenAI attribution:
 // Developed with assistance from ChatGPT (OpenAI).
@@ -65,6 +66,8 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All Statuses");
   const [selectedJob, setSelectedJob] = useState(null);
+  // Recommended job opened from the Dashboard (JH-043).
+  const [detailsJobId, setDetailsJobId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -121,6 +124,7 @@ export default function App() {
     setUnauthorizedHandler(() => {
       setUser(null);
       setSelectedJob(null);
+      setDetailsJobId(null);
 
       if (PRIVATE_PAGES.includes(activePage)) {
         setReturnPage(activePage);
@@ -166,6 +170,7 @@ export default function App() {
       setUser(null);
       setActivePage("Dashboard");
       setSelectedJob(null);
+      setDetailsJobId(null);
       setAuthMessage("");
     } catch (err) {
       if (err instanceof TypeError) {
@@ -392,6 +397,7 @@ export default function App() {
     setActivePage(page);
     setSidebarOpen(false);
     setSelectedJob(null);
+    setDetailsJobId(null);
   }
 
   function updateStatus(id, status) {
@@ -491,7 +497,12 @@ export default function App() {
           </p>
         )}
 
-        {activePage === "Job Postings" ? (
+        {activePage === "Dashboard" && user && detailsJobId != null ? (
+          <JobDetails
+            jobId={detailsJobId}
+            onBack={() => setDetailsJobId(null)}
+          />
+        ) : activePage === "Job Postings" ? (
           <section className="postings-page">
             <div className="page-heading postings-heading">
               <div>
@@ -758,6 +769,7 @@ export default function App() {
                 signedIn={Boolean(user)}
                 authLoading={authLoading}
                 onGoToProfile={() => navigate("Profile")}
+                onViewJob={setDetailsJobId}
               />
             )}
 

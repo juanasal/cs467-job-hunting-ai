@@ -563,3 +563,13 @@ Reviewed and adapted for the CS467 Job Hunting AI project.
   color: #64748b;
   font-size: 12px;
 }
+
+/* Job details page (JH-043) */
+
+.job-details-title {
+  margin: 16px 0 4px;
+}
+
+.job-details-description {
+  white-space: pre-line;
+}
